@@ -1,5 +1,5 @@
 ---
-description: Run the full 8-step SEO & GEO page-optimization pipeline for one page
+description: Run the full SEO & GEO page-optimization pipeline for one page (8 steps + post-publish verification)
 argument-hint: <slug> [gsc keywords: kw1, kw2, ...]
 ---
 
@@ -34,6 +34,14 @@ page 1 below fold = freshness + snippet, declining = content decay). Scrape the 
 on the configured domain, and open `optimizer/OPTIMIZATION-CHECKLIST.md`. Note any GSC
 keywords from `$ARGUMENTS`.
 
+Once per site (not per page), confirm the AI retrieval bots can even reach the content, since
+no on-page work earns a citation if they are blocked:
+```bash
+python optimizer/check_bots.py
+```
+If a retrieval bot (OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-Web) is BLOCKED, flag it
+to the user as a site-level fix; it is outside this page edit but gates all GEO results.
+
 ## Step 2 - Slug and URL review
 Output: KEEP (no change needed) or CHANGE (new slug + "301 redirect from old to new").
 
@@ -57,9 +65,14 @@ Set intensity from the category. Before ANY new H2 or FAQ:
 ```bash
 python optimizer/cannibal.py "<proposed section title>" --exclude <slug>
 ```
-Strong overlap = add a mention + internal link, or skip. Plan headings, keyword placement
-(max 5-6 primary), link budget from the word band (internal links only to money/course and
-content pages, ZERO country/city links), FAQ, and hyperlink vs name-only external sources.
+Strong overlap = add a mention + internal link, or skip. For inbound internal links
+(Checklist #29, links FROM other pages TO this one), list candidate source pages:
+```bash
+python optimizer/interlink.py <slug>
+```
+Plan headings, keyword placement (max 5-6 primary), link budget from the word band (internal
+links only to money/course and content pages, ZERO country/city links), the inbound links to
+add from the `interlink.py` candidates, FAQ, and hyperlink vs name-only external sources.
 No meta tags yet. **Present this plan and wait for approval.**
 
 ## Step 7 - Build the optimized HTML
@@ -81,10 +94,10 @@ Then generate 3 meta options from the actual content.
 ```bash
 python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count>
 ```
-Every hard check must pass (including the changes-summary table); aim for Flesch 60+. Then the
-manual checks: re-score the 50-point checklist (PASS-before vs PASS-after), spot-check 3-4
-external sources, read for flow, confirm no cannibalization. Record every NEW section so future
-pages do not repeat it:
+Every hard check must pass (including the changes-summary table and valid JSON-LD parsing); aim
+for Flesch 60+. Then the manual checks: re-score the 50-point checklist (PASS-before vs
+PASS-after), spot-check 3-4 external sources, read for flow, confirm no cannibalization. Record
+every NEW section so future pages do not repeat it:
 
 ```bash
 python optimizer/ledger.py add <slug> --section "<H2 title>" --angle "<what makes it unique>" --asset "<unique table/data>"
@@ -92,5 +105,16 @@ python optimizer/ledger.py add <slug> --section "<H2 title>" --angle "<what make
 
 Save to `final output/<slug>-green.html`. Report what changed, before/after metrics, the QA
 scorecard + readability, the AI Overview angle, slug and scope verdicts, the 50-point delta,
-the 3 meta options, and the ledger entries added.
+the 3 meta options, and the ledger entries added. To surface the highest-priority page to do
+next, run `python optimizer/next.py`.
 **Then wait for confirmation before the next page.**
+
+## Step 9 - Post-publish verification (later, ~30 days after this page is live)
+Not part of this run. About a month after the page ships, close the loop (see `WORKFLOW.md`
+Step 9): re-check the live AI Overview and run a few buyer prompts across ChatGPT, Perplexity,
+Gemini, and Claude, pull fresh GSC numbers, and log the result:
+```bash
+python optimizer/verify.py add <slug> --keyword "<primary keyword>" \
+    --cited chatgpt,perplexity --not-cited gemini,claude \
+    --ai-overview yes --ctr-delta +0.4 --pos-delta -3 --note "<what earned/missed the citation>"
+```
