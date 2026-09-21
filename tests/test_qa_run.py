@@ -144,6 +144,16 @@ def test_comment_with_div_does_not_break_tag_balance(tmp_path):
     assert qa_check.run(path, forced_words=1500, is_new=False) == 0
 
 
+def test_broken_jsonld_fails(tmp_path):
+    # Introduce a trailing comma into the FAQPage JSON-LD -> invalid JSON.
+    html = _passing_optimize_html().replace(
+        '"acceptedAnswer":{"@type":"Answer","text":"Most candidates finish within a few months."}}]}',
+        '"acceptedAnswer":{"@type":"Answer","text":"Most candidates finish within a few months."}},]}',
+    )
+    path = _write(tmp_path, "page-green.html", html)
+    assert qa_check.run(path, forced_words=1500, is_new=False) == 1
+
+
 def test_passing_new_doc(tmp_path):
     path = _write(tmp_path, "page.html", _passing_new_html())
     assert qa_check.run(path, forced_words=1500, is_new=True) == 0

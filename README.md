@@ -46,6 +46,15 @@ python optimizer/qa_check.py "final output/<slug>.html" --words <n> --new       
 python optimizer/ledger.py add <slug> --section "<H2 title>" --angle "<unique angle>"
 ```
 
+Supporting helpers:
+
+```bash
+python optimizer/next.py                 # rank pending pages by priority (what to do next)
+python optimizer/interlink.py <slug>     # pages that should link TO this one (Checklist #29)
+python optimizer/check_bots.py           # is the live robots.txt allowing AI retrieval bots?
+python optimizer/verify.py add <slug> --keyword "K" --cited chatgpt,perplexity   # Step 9 log
+```
+
 No GSC exports yet? Copy the committed sample data and the tooling runs immediately:
 
 ```bash
@@ -93,9 +102,14 @@ SEO & GEO Optimization/
 │   ├── scoring.py                    Pure scoring/parsing helpers (unit-tested)
 │   ├── lookup.py                     Step 1: merge scorecard + audit into one brief
 │   ├── cannibal.py                   Rule 6: find pages/blogs/past builds covering a subtopic
+│   ├── interlink.py                  Checklist #29: pages that should link TO the target
 │   ├── ledger.py                     Content ledger: record new sections, block future repeats
-│   └── qa_check.py                   QA gate (optimize + --new modes, readability score)
-├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal)
+│   ├── next.py                       Rank pending pages by priority (what to optimize next)
+│   ├── check_bots.py                 robots.txt retrieval-bot access check
+│   ├── verify.py                     Step 9 post-publish verification log
+│   └── qa_check.py                   QA gate (optimize + --new modes, JSON-LD + readability)
+├── .github/workflows/ci.yml      CI: pytest + byte-compile on push/PR
+├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, interlink, check_bots, verify)
 ├── requirements.txt              openpyxl (runtime) + pytest (dev)
 ├── data/                         scorecard.json, audit.json, content_ledger.json (gitignored)
 │   └── *.example.json            Committed sample data so the tooling runs before real exports

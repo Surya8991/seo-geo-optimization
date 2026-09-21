@@ -64,3 +64,21 @@ class TestStripTags:
         out = qa_check.strip_tags(html)
         assert "Hello" in out and "world" in out
         assert "var a" not in out and "x{}" not in out
+
+
+class TestJsonLd:
+    VALID = ('<script type="application/ld+json">'
+             '{"@context":"https://schema.org","@type":"FAQPage"}</script>')
+    BROKEN = ('<script type="application/ld+json">'
+              '{"@type":"FAQPage",}</script>')  # trailing comma -> invalid JSON
+
+    def test_extract_counts_blocks(self):
+        assert len(qa_check.extract_jsonld_blocks(self.VALID + self.BROKEN)) == 2
+
+    def test_valid_block_has_no_errors(self):
+        assert qa_check.invalid_jsonld_blocks(self.VALID) == []
+
+    def test_broken_block_is_reported(self):
+        bad = qa_check.invalid_jsonld_blocks(self.VALID + self.BROKEN)
+        assert len(bad) == 1
+        assert bad[0][0] == 2  # the second block is the broken one

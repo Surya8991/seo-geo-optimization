@@ -134,6 +134,25 @@ def flesch_reading_ease(text):
     spw = syl / len(words)
     return round(206.835 - 1.015 * wps - 84.6 * spw, 1)
 
+def extract_jsonld_blocks(html):
+    """Return the raw text of every <script type="application/ld+json"> block."""
+    return re.findall(
+        r'<script[^>]*type="application/ld\+json"[^>]*>([\s\S]*?)</script>',
+        html, re.I,
+    )
+
+
+def invalid_jsonld_blocks(html):
+    """Return a list of (index, error) for JSON-LD blocks that do not parse as JSON."""
+    import json as _json
+    bad = []
+    for i, block in enumerate(extract_jsonld_blocks(html), 1):
+        try:
+            _json.loads(block.strip())
+        except ValueError as e:
+            bad.append((i, str(e).split("\n")[0]))
+    return bad
+
 # ---- checks ----------------------------------------------------------------
 
 def run(path, forced_words=None, is_new=False):
@@ -244,6 +263,11 @@ def run(path, forced_words=None, is_new=False):
         check(faq_html == ld_q and faq_html > 0, "FAQ HTML == JSON-LD count", f"html={faq_html} jsonld={ld_q}")
     else:
         check(faq_html > 0, "FAQ present (microdata)", f"{faq_html} questions; no JSON-LD script block")
+
+    # 15b. Every JSON-LD block parses as valid JSON
+    bad_ld = invalid_jsonld_blocks(html)
+    check(not bad_ld, "JSON-LD blocks parse as valid JSON",
+          "; ".join(f"block {i}: {err}" for i, err in bad_ld[:3]))
 
     # 16. Rough tag balance (ignore tags inside HTML comments, e.g. template examples)
     html_no_comments = re.sub(r"<!--[\s\S]*?-->", " ", html)

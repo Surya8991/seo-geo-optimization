@@ -50,7 +50,7 @@ descriptive filenames in `src`); the measurement happens on the live page.
 28. **Schema Markup** - Article, FAQ, HowTo, BreadcrumbList, Author schema
 
 ## F. LINKING STRATEGY (3 points)
-29. **Internal Links - Inbound** - Min 5 internal links FROM other pages TO this page
+29. **Internal Links - Inbound** - Min 5 internal links FROM other pages TO this page (use `optimizer/interlink.py <slug>` to find candidate source pages)
 30. **Internal Links - Outbound** - 3-5 links FROM this page to money/course pages, category pages, related content. Each must be **contextually relevant with descriptive anchor text naming the destination topic** (no CTA anchors). **No country/city page links** (e.g., example.com/australia/, example.com/india/). Only link to generic money/course pages (example.com/<slug>/), category pages, or other content pages.
 31. **External Links - Outbound** - 3-5 links to high-authority external sources
 

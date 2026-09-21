@@ -77,6 +77,15 @@ band (internal links only to money/course and content pages, ZERO country/city l
 questions, and which external sources get a hyperlink vs a name-only mention. Do NOT propose
 meta tags yet; those come after the build.
 
+For inbound internal links (Checklist #29, links FROM other pages TO this one), list the
+candidate source pages:
+
+```bash
+python optimizer/interlink.py <slug>
+```
+
+Add a contextual link from each strong candidate to the target with descriptive anchor text.
+
 **Present this plan and get approval before Step 7.**
 
 ## STEP 7 - Build the optimized HTML
@@ -139,8 +148,15 @@ Roughly 30 days after the page goes live, for the primary keyword and 3-5 real b
 - Pull fresh **GSC** numbers for the URL: clicks, impressions, CTR, average position, and
   compare against the before snapshot from Step 1.
 
-Log the result (a row per page: date, keyword, per-engine cited y/n, CTR/position delta) and
-feed it back: pages that moved confirm the lever; pages that did not get re-queued with a new
+Log the result with `verify.py` so it is captured in one place:
+
+```bash
+python optimizer/verify.py add <slug> --keyword "<primary keyword>" \
+    --cited chatgpt,perplexity --not-cited gemini,claude \
+    --ai-overview yes --ctr-delta +0.4 --pos-delta -3 --note "<what earned/missed the citation>"
+```
+
+Feed it back: pages that moved confirm the lever; pages that did not get re-queued with a new
 angle. When exports refresh, rerun `python build_scorecard.py` so the scorecard/decay signal
-(`trend_label`, category) reflects the new reality. This step is manual today; the log is the
-input to deciding the next page to optimize.
+(`trend_label`, category) reflects the new reality, then `python optimizer/next.py` to pick the
+next page by priority.
