@@ -31,6 +31,14 @@ from `config.json`.
 Fix the primary keyword and the search intent. If GSC keywords were supplied, treat them as
 real demand. Confirm this topic is worth a standalone page (business value, realistic to rank).
 
+Once per site (not per page), confirm the AI retrieval bots can reach the content, since no
+on-page work earns a citation if they are blocked:
+```bash
+python optimizer/check_bots.py
+```
+If a retrieval bot (OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-Web) is BLOCKED, flag it
+to the user as a site-level fix; it is outside this page but gates all GEO results.
+
 ## Step 2 - Cannibalization clearance (do this before writing anything)
 The topic and every planned H2 must not already be owned by an existing page, a blog, or a
 past build:
@@ -53,7 +61,15 @@ Slug (short, keyword-rich), heading structure (strict H1 > H2 > H3), primary key
 placement (max 5-6), secondary and longtail keyword placement, link budget from the
 word-count band (internal links only to money/course and content pages with contextual
 descriptive anchors, ZERO CTA anchors, ZERO country/city links), FAQ set, and which external
-sources get a hyperlink vs a name-only mention. **Present the plan and wait for approval.**
+sources get a hyperlink vs a name-only mention.
+
+The new page will have no inbound links until it is published. Plan them now so they go live
+with it (Checklist #29): find existing pages that should link TO the new page by its topic:
+```bash
+python optimizer/interlink.py "<primary keyword>"
+```
+List the source pages to update with a contextual link once the page is live. **Present the
+plan and wait for approval.**
 
 ## Step 5 - Write the page
 Start from `optimizer/template.html` but REMOVE the review-only blocks (the green/red example
@@ -70,8 +86,8 @@ Then produce 3 meta-title/description options from the actual content.
 ```bash
 python optimizer/qa_check.py "final output/<slug>.html" --words <reader_word_count> --new
 ```
-All hard checks must pass; aim for a Flesch reading ease of 60+. Then record every substantive
-new section so future pages do not repeat it:
+All hard checks must pass (including valid JSON-LD parsing); aim for a Flesch reading ease of
+60+. Then record every substantive new section so future pages do not repeat it:
 
 ```bash
 python optimizer/ledger.py add <slug> --section "<H2 title>" --angle "<what makes it unique>" --asset "<any unique table/data>"
@@ -80,3 +96,13 @@ python optimizer/ledger.py add <slug> --section "<H2 title>" --angle "<what make
 Save to `final output/<slug>.html`. Report: the plan delivered, the 50-point coverage, the QA
 scorecard + readability, the AI Overview angle, the 3 meta options, and the ledger entries
 added. **Wait for confirmation before the next page.**
+
+## Step 7 - Post-publish verification (later, ~30 days after this page is live)
+Not part of this run. About a month after publishing, close the loop (see `WORKFLOW.md`
+Step 9): confirm the planned inbound links went live, re-check the live AI Overview, run a few
+buyer prompts across ChatGPT, Perplexity, Gemini, and Claude, and log the result:
+```bash
+python optimizer/verify.py add <slug> --keyword "<primary keyword>" \
+    --cited chatgpt,perplexity --not-cited gemini,claude \
+    --ai-overview yes --note "<what earned/missed the citation>"
+```
