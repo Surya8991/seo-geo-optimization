@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{PAGE TITLE}} - UPDATED (green = new)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#22295a;--blue:#215aff;--lime:#C8E130}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,sans-serif;color:#262d3d;margin:0;background:#f4f6fb;line-height:1.7;font-size:16px}
+  .wrap{max-width:820px;margin:0 auto;padding:24px 20px 90px;background:#fff}
+  h1{font-size:31px;color:var(--navy);font-weight:800;line-height:1.25;margin:6px 0 18px}
+  h2{font-size:27px;color:var(--navy);font-weight:800;margin:32px 0 12px}
+  h3{font-size:20px;color:var(--navy);font-weight:700;margin:22px 0 8px}
+  h4{font-size:17px;color:var(--navy);font-weight:700;margin:16px 0 6px}
+  p{margin:0 0 14px}
+  ul,ol{padding-left:20px;margin:0 0 14px}
+  li{margin-bottom:7px}
+  a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+  blockquote{font-style:italic;font-weight:500;color:var(--navy);padding:14px 18px;margin:14px 0;background:#e9f0ff;border-left:3px solid #7d82f0;border-radius:6px}
+  table{width:100%;margin:8px 0 18px;border-collapse:collapse}
+  th{font-size:14px;text-align:left;padding:8px;color:#000;background:#d6eaf8;border:2px solid #9ebaf3;font-weight:700}
+  td{font-size:14px;padding:8px;vertical-align:top;border:2px solid #9ebaf3}
+  table tr:hover{background:#dbeafe}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-scroll table{min-width:620px}
+  figure{margin:10px 0 18px}
+  figure img{max-width:100%;height:auto;border-radius:8px;display:block;border:1px solid #e3e8f0}
+  figcaption{font-size:12px;color:#6b7280;margin-top:6px}
+  /* GREEN REVIEW MARKERS - remove before publishing */
+  .new-block{background:#e9f9ef;border:1px solid #b8e6c8;border-left:4px solid #27ae60;border-radius:8px;padding:6px 18px 14px;margin:22px 0}
+  .new-block h2,.new-block h3{margin-top:14px}
+  .new-block table th{background:#cfe8d6}
+  .new-tag{display:inline-block;background:#27ae60;color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:20px;margin:12px 0 4px}
+  .new-inline{background:#d8f5e3;padding:1px 4px;border-radius:3px}
+  /* RED REMOVAL MARKERS - content to delete on publish */
+  .remove-block{background:#fdeaea;border:1px solid #f2b8b8;border-left:4px solid #e74c3c;border-radius:8px;padding:6px 18px 14px;margin:22px 0}
+  .remove-tag{display:inline-block;background:#e74c3c;color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:20px;margin:12px 0 4px}
+  /* FAQ */
+  .faq{background:#fff;padding:6px 8px;margin:10px 0;border-radius:8px}
+  .faq-item{border-bottom:1px solid #cfe9d8}
+  .faq-question{cursor:pointer;padding:14px 12px;display:flex;gap:10px;justify-content:space-between;align-items:center}
+  .faq-question p{margin:0;font-weight:600;font-size:17px;line-height:26px}
+  .faq-item.active .faq-question p,.faq-question:hover p{color:#166b39}
+  .toggle-icon{min-width:20px;min-height:20px;border:2px solid #333;border-radius:50%;position:relative}
+  .faq-item.active .toggle-icon{border-color:#166b39}
+  .toggle-icon::before,.toggle-icon::after{content:"";position:absolute;background:#333;top:50%;left:50%}
+  .toggle-icon::before{width:10px;height:2px;transform:translate(-50%,-50%)}
+  .toggle-icon::after{width:2px;height:10px;transform:translate(-50%,-50%)}
+  .faq-item.active .toggle-icon::after{transform:translate(-50%,-50%) rotate(90deg)}
+  .faq-answer{padding:0 16px;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .35s ease}
+  .faq-item.active .faq-answer{max-height:640px;padding:4px 16px 14px}
+  .note{background:#fff8e1;border:1px solid #f0d68a;border-radius:8px;padding:12px 16px;font-size:14px;margin-bottom:22px}
+  /* Changes summary - review only, remove on publish */
+  .changes-summary th{background:#e6efe9}
+  .changes-summary td{font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== REVIEW NOTE (yellow) - not reader-facing, remove on publish ===== -->
+<div class="note"><strong>Review copy - {{PAGE NAME}}.</strong> {{What changed, source articles, publish instructions: 301s, remove green/red markers, render tables in .table-scroll, FAQ in site microdata.}}</div>
+
+<!-- ===== PUBLISHING FIELDS (blue) - not reader-facing ===== -->
+<div class="note" style="background:#eef4ff;border-color:#a9c2f5">
+<strong>Publishing fields - primary keyword: {{primary keyword}}</strong><br>
+<strong>Meta title ({{len}}/60):</strong> {{meta title, must contain primary keyword + year}}<br>
+<strong>Meta description ({{len}}/155):</strong> {{150-155 chars, keyword + hook/stat + benefit}}<br>
+<strong>H1:</strong> {{H1 containing primary keyword}}
+</div>
+
+<h1>{{H1 containing primary keyword}}</h1>
+
+<!-- ===== OPENING PARAGRAPH (AIO-optimized) =====
+     Write a strong 40-60 word answer-first definition paragraph right after the H1.
+     This serves as the AIO/featured-snippet target. No special card or styling -
+     it reads as natural content but is structured to be pulled by Google.
+     Follow with 2-3 sentences expanding the context before the first H2.
+-->
+<p>{{40-60 word answer-first definition of the topic, containing primary keyword. This is the paragraph Google pulls for AI Overview and featured snippets. Write it as natural prose, not a card.}}</p>
+
+<p>{{Expand with 2-3 sentences of context: why this matters, who benefits, what this page covers.}}</p>
+
+<!-- ===== BODY =====
+     - Keep existing good content unmarked.
+     - Wrap NEW content in .new-block + .new-tag (label what it is / where it came from).
+     - Wrap content TO REMOVE in .remove-block + .remove-tag (label the reason).
+     - Inline additions use <span class="new-inline">...</span>.
+     - Tables go inside <div class="table-scroll">.
+     - Max 1 link per paragraph. Descriptive anchor text, no CTA words.
+     - No country/city page links (e.g., example.com/australia/).
+-->
+
+<h2>{{Section H2}}</h2>
+<p>{{content}}</p>
+
+<!-- Example new block:
+<div class="new-block">
+  <span class="new-tag">New - {{what}} (from {{source}})</span>
+  <h3>{{heading}}</h3>
+  <p>{{new content}}</p>
+</div>
+-->
+
+<!-- Example removal block:
+<div class="remove-block">
+  <span class="remove-tag">REMOVE - {{reason: thin / outdated / off-topic / duplicate}}</span>
+  <p>{{original content flagged for deletion}}</p>
+</div>
+-->
+
+<!-- ===== CONCLUSION - brand named once max, only if natural ===== -->
+<h2>Conclusion</h2>
+<p>{{conclusion, primary keyword once}}</p>
+
+<!-- ===== CHANGES SUMMARY (review only, remove on publish) =====
+     Optimize mode only. One row per change so the reviewer sees exactly what was done.
+     qa_check.py (optimize mode) requires a table with class="changes-summary".
+     Action = Added / Updated / Removed / Kept. Include secondary/longtail keywords placed
+     and interlinks added (with anchor text) so those are visible at a glance.
+-->
+<div class="note" style="background:#eef7f0;border-color:#b8e0c6">
+<strong>Changes summary (review only, remove on publish)</strong>
+<div class="table-scroll">
+<table class="changes-summary">
+<thead><tr><th>Area</th><th>Action</th><th>Detail / reason / source</th></tr></thead>
+<tbody>
+  <tr><td>{{section or element}}</td><td>{{Added / Updated / Removed}}</td><td>{{what changed and why, or source}}</td></tr>
+  <tr><td>Secondary + longtail keywords</td><td>Added</td><td>{{list the secondary/longtail terms placed and where}}</td></tr>
+  <tr><td>Internal links</td><td>Added</td><td>{{destination + anchor text for each, all contextually relevant, no CTA anchors, no geo pages}}</td></tr>
+  <tr><td>External links</td><td>Added</td><td>{{sources cited, each on a specific stat/study/quote}}</td></tr>
+  <tr><td>Stats refreshed</td><td>Updated</td><td>{{old stat -> 2024-2026 equivalent}}</td></tr>
+  <tr><td>FAQ</td><td>Added</td><td>{{count, PAA-sourced}}</td></tr>
+  <tr><td>AI Overview target</td><td>-</td><td>{{who currently ranks in the AI Overview for this keyword + the angle chosen to earn a citation}}</td></tr>
+  <tr><td>Ledger</td><td>-</td><td>{{new sections recorded via ledger.py so future pages do not repeat them}}</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ===== FAQ - visible accordion (microdata) MUST match the JSON-LD block below exactly (count + text) ===== -->
+<div class="new-block">
+  <span class="new-tag">FAQ - PAA-targeted, new angles only</span>
+  <h2>Frequently Asked Questions</h2>
+  <section class="faq" itemscope itemtype="https://schema.org/FAQPage">
+    <div class="faq-item active" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+      <div class="faq-question"><p itemprop="name">{{Question 1}}</p><span class="toggle-icon"></span></div>
+      <div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">{{Answer 1}}</p></div>
+    </div>
+    <!-- repeat .faq-item per question (5-6 under 3K words, 6-8 for 3-6K, 8-10 for 6K+) -->
+  </section>
+</div>
+
+<!-- ===== SCHEMA (JSON-LD) - fill in and keep on publish. See MODERN-SEO-PLAYBOOK.md sec 5.
+     Article + BreadcrumbList always; add HowTo only for real step sequences.
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "{{H1 / title}}",
+  "datePublished": "{{YYYY-MM-DD}}",
+  "dateModified": "{{YYYY-MM-DD}}",
+  "author": { "@type": "Person", "name": "{{author}}", "sameAs": "{{author profile URL}}" },
+  "publisher": { "@type": "Organization", "name": "{{BRAND}}" },
+  "mainEntityOfPage": "{{canonical page URL}}"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Info", "item": "https://www.example.com/info" },
+    { "@type": "ListItem", "position": 2, "name": "{{category}}", "item": "{{category URL}}" },
+    { "@type": "ListItem", "position": 3, "name": "{{page title}}", "item": "{{canonical page URL}}" }
+  ]
+}
+</script>
+===== -->
+
+<!-- ===== FAQ JSON-LD - Google-preferred schema. Every Question/answer here MUST match a
+     visible accordion item above word for word. qa_check.py enforces the count parity. ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "{{Question 1}}",
+      "acceptedAnswer": { "@type": "Answer", "text": "{{Answer 1}}" }
+    }
+  ]
+}
+</script>
+
+</div>
+<script>
+  document.querySelectorAll('.faq-question').forEach(function(q){
+    q.addEventListener('click', function(){
+      var item=q.parentElement, open=item.classList.contains('active');
+      document.querySelectorAll('.faq-item').forEach(function(i){i.classList.remove('active');});
+      if(!open) item.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

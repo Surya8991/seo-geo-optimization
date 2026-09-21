@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Generated data (outputs, may contain site data)
+data/*.json
+
+# Optimized page outputs
+final output/*.html
+
+# Source exports (site data, keep out of the repo)
+*.xlsx
+gsc/
+
+# OS
+.DS_Store
+Thumbs.db

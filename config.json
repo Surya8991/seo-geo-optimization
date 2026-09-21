@@ -1,0 +1,42 @@
+{
+  "brand_name": "Your Brand",
+  "domain": "example.com",
+  "base_url": "https://www.example.com/",
+  "info_path": "info",
+  "blog_path": "blog",
+  "money_page_pattern": "https://www.example.com/{course-slug}/",
+  "max_brand_mentions": 1,
+
+  "_note": "This is the ONLY place brand specifics live. Set brand_name, domain, base_url and the URL paths for your site, then every script and doc uses them. course_keyword_map drives money-page matching in build_scorecard.py; leave it empty to rely on title-word overlap only.",
+
+  "course_keyword_map": {},
+
+  "_course_keyword_map_example": {
+    "product-a": ["product a", "prod-a"],
+    "product-b": ["product b", "prod-b"]
+  },
+
+  "country_slugs": [
+    "albania", "algeria", "angola", "argentina", "armenia", "australia",
+    "austria", "azerbaijan", "bahamas", "bahrain", "barbados", "belgium",
+    "bermuda", "botswana", "brazil", "brunei", "bulgaria", "cambodia",
+    "cameroon", "canada", "chile", "china", "colombia", "costa-rica",
+    "croatia", "cyprus", "czechia", "denmark", "dominican-republic",
+    "ecuador", "egypt", "el-salvador", "estonia", "fiji", "finland",
+    "france", "georgia", "germany", "ghana", "greece", "guatemala",
+    "guyana", "hong-kong", "hungary", "iceland", "india", "indonesia",
+    "ireland", "israel", "italy", "ivory-coast", "jamaica", "japan",
+    "jordan", "kazakhstan", "kenya", "kuwait", "latvia", "libya",
+    "lithuania", "luxembourg", "macedonia", "malawi", "malaysia",
+    "maldives", "malta", "mauritius", "mexico", "moldova", "mongolia",
+    "morocco", "mozambique", "namibia", "netherlands", "new-zealand",
+    "norway", "oman", "panama", "philippines", "poland", "portugal",
+    "puerto-rico", "qatar", "romania", "rwanda", "saudi-arabia",
+    "senegal", "serbia", "singapore", "slovak-republic", "slovenia",
+    "south-africa", "south-korea", "spain", "sudan", "sweden",
+    "switzerland", "taiwan", "tajikistan", "tanzania", "thailand",
+    "trinidad-and-tobago", "tunisia", "turkey", "uganda", "ukraine",
+    "united-arab-emirates", "united-kingdom", "uruguay", "uzbekistan",
+    "vietnam", "zambia", "zimbabwe"
+  ]
+}
