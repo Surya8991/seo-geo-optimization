@@ -22,7 +22,9 @@ import re
 import argparse
 
 from config_loader import CONFIG
-from constants import LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX
+from constants import (
+    LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX, MIN_STAT_YEAR,
+)
 
 BRAND = CONFIG["brand_name"]
 # Strip a leading "www." PREFIX only. str.lstrip removes a character SET, so the
@@ -207,6 +209,62 @@ def keyword_placement(html, text, h1_text, meta_title, keyword):
         "count": tl.count(kw),
     }
 
+
+_STAT_SIGNAL_RE = re.compile(
+    r"%|\bpercent\b|\bstud(y|ies)\b|\bsurvey\b|\breport\b|\bdata\b|\bstatistics?\b|\bgrowth\b|\bmarket\b",
+    re.I)
+
+
+def stale_stat_years(text, min_year=MIN_STAT_YEAR):
+    """Years before min_year that sit next to a statistic signal (a %, 'study', etc.).
+
+    Historical mentions ("founded in 1998") have no adjacent stat signal, so they are
+    not flagged; a "2021 study found 45%" is. Returns sorted unique flagged years.
+    """
+    flagged = set()
+    for m in re.finditer(r"\b(19\d\d|20\d\d)\b", text):
+        year = int(m.group(1))
+        if year >= min_year:
+            continue
+        window = text[max(0, m.start() - 45): m.end() + 45]
+        if _STAT_SIGNAL_RE.search(window):
+            flagged.add(year)
+    return sorted(flagged)
+
+
+def has_freshness_signal(html, text, min_year=MIN_STAT_YEAR):
+    """True if the page shows a current-year freshness date: a JSON-LD dateModified/
+    datePublished >= min_year, or visible 'updated/reviewed ... 20YY' >= min_year."""
+    for m in re.finditer(r'"date(?:Modified|Published)"\s*:\s*"(\d{4})', html):
+        if int(m.group(1)) >= min_year:
+            return True
+    for m in re.finditer(r"(updated|reviewed|refreshed)[^.<]{0,30}?\b(20\d\d)\b", text, re.I):
+        if int(m.group(2)) >= min_year:
+            return True
+    return False
+
+
+def schema_completeness(html):
+    """Report incomplete typed JSON-LD blocks and which recommended types are absent.
+
+    Returns (missing_fields, absent_types): missing_fields is a list of strings for a
+    present Article/BlogPosting that lacks required fields; absent_types lists
+    recommended schema (Article, BreadcrumbList) not present at all (informational).
+    """
+    blob = " ".join(extract_jsonld_blocks(html))
+    missing = []
+    has_article = re.search(r'"@type"\s*:\s*"(Article|BlogPosting)"', blob)
+    if has_article:
+        for field in ("headline", "author", "datePublished", "dateModified"):
+            if f'"{field}"' not in blob:
+                missing.append(field)
+    absent = []
+    if not has_article:
+        absent.append("Article/BlogPosting")
+    if not re.search(r'"@type"\s*:\s*"BreadcrumbList"', blob):
+        absent.append("BreadcrumbList")
+    return missing, absent
+
 # ---- checks ----------------------------------------------------------------
 
 def run(path, forced_words=None, is_new=False, keyword=None):
@@ -344,6 +402,22 @@ def run(path, forced_words=None, is_new=False, keyword=None):
         else:
             check(kp["in_conclusion"], "Primary keyword in conclusion")
         info.append(("Primary keyword in meta title", "yes" if kp["in_title"] else "NO (add it)"))
+
+    # 15f. Stale stats (Rule 12): pre-2024 years next to a statistic signal
+    stale = stale_stat_years(text)
+    check(not stale, f"No pre-{MIN_STAT_YEAR} stats", "years near stats: " + ", ".join(map(str, stale)))
+
+    # 15g. Freshness: a current-year updated/modified date is present (top GEO lever)
+    check(has_freshness_signal(html, text),
+          f"Freshness date present (>= {MIN_STAT_YEAR})",
+          'add a visible "Last updated: <Month> <year>" or JSON-LD dateModified')
+
+    # 15h. Schema completeness: a present Article must be complete; recommend the set
+    missing_fields, absent_types = schema_completeness(html)
+    check(not missing_fields, "Article schema complete (if present)",
+          "missing: " + ", ".join(missing_fields))
+    if absent_types:
+        info.append(("Recommended schema absent", ", ".join(absent_types) + " (add when applicable)"))
 
     # 16. Rough tag balance (ignore tags inside HTML comments, e.g. template examples)
     html_no_comments = re.sub(r"<!--[\s\S]*?-->", " ", html)

@@ -141,3 +141,52 @@ class TestKeywordPlacement:
         kp = qa_check.keyword_placement("<h1>X</h1><p>x product certification</p>",
                                         "x product certification", "X", "X", "product certification")
         assert kp["in_conclusion"] is None
+
+
+class TestStaleStats:
+    def test_flags_pre2024_year_near_stat(self):
+        assert qa_check.stale_stat_years("A 2021 study found 45% growth.") == [2021]
+
+    def test_ignores_historical_year_without_stat_signal(self):
+        assert qa_check.stale_stat_years("The company was founded in 1998 in Boston.") == []
+
+    def test_current_years_not_flagged(self):
+        assert qa_check.stale_stat_years("A 2026 survey reported 60% adoption.") == []
+
+    def test_multiple_flagged_sorted_unique(self):
+        assert qa_check.stale_stat_years("2019 data and 2021 data, plus 2019 report.") == [2019, 2021]
+
+
+class TestFreshness:
+    def test_jsonld_datemodified_counts(self):
+        html = '<script type="application/ld+json">{"dateModified":"2026-09-01"}</script>'
+        assert qa_check.has_freshness_signal(html, "") is True
+
+    def test_visible_updated_line_counts(self):
+        assert qa_check.has_freshness_signal("", "Last updated September 2026.") is True
+
+    def test_old_date_does_not_count(self):
+        assert qa_check.has_freshness_signal('{"dateModified":"2021-01-01"}', "updated in 2021") is False
+
+    def test_no_signal(self):
+        assert qa_check.has_freshness_signal("<p>no dates here</p>", "no dates here") is False
+
+
+class TestSchemaCompleteness:
+    ARTICLE_OK = ('<script type="application/ld+json">{"@type":"Article",'
+                  '"headline":"x","author":"y","datePublished":"2026-01-01",'
+                  '"dateModified":"2026-09-01"}</script>')
+
+    def test_complete_article_has_no_missing(self):
+        missing, absent = qa_check.schema_completeness(self.ARTICLE_OK)
+        assert missing == []
+        assert "Article/BlogPosting" not in absent
+
+    def test_incomplete_article_reports_missing(self):
+        html = '<script type="application/ld+json">{"@type":"Article","headline":"x"}</script>'
+        missing, _ = qa_check.schema_completeness(html)
+        assert "author" in missing and "dateModified" in missing
+
+    def test_absent_types_listed_when_no_article(self):
+        _, absent = qa_check.schema_completeness('<script type="application/ld+json">{"@type":"FAQPage"}</script>')
+        assert "Article/BlogPosting" in absent and "BreadcrumbList" in absent

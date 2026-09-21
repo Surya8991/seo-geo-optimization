@@ -76,6 +76,66 @@ def add(slug, keyword, cited, ctr_delta, pos_delta, ai_overview, note):
     return 0
 
 
+def _num(s):
+    """Parse a signed delta string like '+0.4' / '-3' to a float; None if not numeric."""
+    try:
+        return float(str(s).strip().lstrip("+"))
+    except (ValueError, AttributeError):
+        return None
+
+
+def summarize(entries):
+    """Aggregate the log: per-engine citation rate, AI-Overview rate, mean deltas."""
+    engine_cited, engine_total = {}, {}
+    aio_yes = aio_total = 0
+    ctr_deltas, pos_deltas = [], []
+    for e in entries:
+        for eng, cited in e.get("cited", {}).items():
+            engine_total[eng] = engine_total.get(eng, 0) + 1
+            engine_cited[eng] = engine_cited.get(eng, 0) + (1 if cited else 0)
+        aio = str(e.get("ai_overview", "")).lower()
+        if aio in ("yes", "no", "partial"):
+            aio_total += 1
+            if aio in ("yes", "partial"):
+                aio_yes += 1
+        cd, pd = _num(e.get("ctr_delta")), _num(e.get("pos_delta"))
+        if cd is not None:
+            ctr_deltas.append(cd)
+        if pd is not None:
+            pos_deltas.append(pd)
+    rates = {eng: (engine_cited[eng], engine_total[eng]) for eng in engine_total}
+    return {
+        "pages": len({e.get("page_slug") for e in entries}),
+        "entries": len(entries),
+        "engine_rates": rates,
+        "ai_overview": (aio_yes, aio_total),
+        "avg_ctr_delta": round(sum(ctr_deltas) / len(ctr_deltas), 2) if ctr_deltas else None,
+        "avg_pos_delta": round(sum(pos_deltas) / len(pos_deltas), 2) if pos_deltas else None,
+    }
+
+
+def report():
+    data = load()
+    s = summarize(data["entries"])
+    if not s["entries"]:
+        print("Verification log is empty. Record passes with `verify.py add ...`.")
+        return 0
+    print(f"\nVerification rollup: {s['entries']} entries across {s['pages']} pages\n")
+    print("Citation rate by engine:")
+    for eng, (cited, total) in sorted(s["engine_rates"].items()):
+        pct = round(100 * cited / total) if total else 0
+        print(f"  {eng:<20} {cited}/{total} cited ({pct}%)")
+    ay, at = s["ai_overview"]
+    if at:
+        print(f"\nAI Overview presence: {ay}/{at} ({round(100*ay/at)}%)")
+    if s["avg_ctr_delta"] is not None:
+        print(f"Avg CTR delta: {s['avg_ctr_delta']:+} points")
+    if s["avg_pos_delta"] is not None:
+        print(f"Avg position delta: {s['avg_pos_delta']:+} (negative = moved up)")
+    print()
+    return 0
+
+
 def list_entries(slug=None):
     data = load()
     rows = [e for e in data["entries"] if not slug or slug.lower() in e["page_slug"].lower()]
@@ -117,6 +177,8 @@ if __name__ == "__main__":
     l = sub.add_parser("list")
     l.add_argument("slug", nargs="?", default=None)
 
+    sub.add_parser("report")
+
     args = ap.parse_args()
     if args.cmd == "add":
         cited = build_cited(args.cited, args.not_cited)
@@ -124,3 +186,5 @@ if __name__ == "__main__":
                      args.ai_overview, args.note))
     if args.cmd == "list":
         sys.exit(list_entries(args.slug))
+    if args.cmd == "report":
+        sys.exit(report())

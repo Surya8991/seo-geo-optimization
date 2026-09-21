@@ -31,6 +31,9 @@ def _passing_optimize_html():
 <strong>Meta description ({len(desc)}/155):</strong> {desc}<br>
 <strong>H1:</strong> Product Certification
 </div>
+<script type="application/ld+json">
+{{"@context":"https://schema.org","@type":"Article","headline":"Product Certification Guide","author":{{"@type":"Person","name":"Jane Doe"}},"datePublished":"2026-01-10","dateModified":"2026-09-15"}}
+</script>
 <h1>Product Certification Guide</h1>
 <p>{aio}</p>
 <p>This context sentence explains why the topic matters. A second sentence covers who benefits.</p>
@@ -83,6 +86,9 @@ def _passing_new_html():
 <br><strong>Meta description ({len(desc)}/155):</strong> {desc}<br>
 <strong>H1:</strong> How to Measure Training ROI
 </div>
+<script type="application/ld+json">
+{{"@context":"https://schema.org","@type":"Article","headline":"How to Measure Training ROI","author":{{"@type":"Person","name":"Jane Doe"}},"datePublished":"2026-02-01","dateModified":"2026-09-10"}}
+</script>
 <h1>How to Measure Training ROI</h1>
 <p>{aio}</p>
 <p>This introduction frames the calculation. A second sentence sets up the method below.</p>
@@ -170,6 +176,28 @@ def test_skipped_heading_level_fails(tmp_path):
 def test_image_without_alt_fails(tmp_path):
     html = _passing_optimize_html().replace(
         "<h2>Conclusion</h2>", '<p><img src="/img/chart.png"></p>\n<h2>Conclusion</h2>')
+    path = _write(tmp_path, "page-green.html", html)
+    assert qa_check.run(path, forced_words=1500, is_new=False) == 1
+
+
+def test_stale_stat_fails(tmp_path):
+    html = _passing_optimize_html().replace(
+        "A 2026 industry survey put the median cost higher than the prior year",
+        "A 2019 industry survey put the median cost 30% higher than the prior year")
+    path = _write(tmp_path, "page-green.html", html)
+    assert qa_check.run(path, forced_words=1500, is_new=False) == 1
+
+
+def test_missing_freshness_fails(tmp_path):
+    # Remove the dateModified so no freshness signal remains.
+    html = _passing_optimize_html().replace('"dateModified":"2026-09-15"', '"note":"none"')
+    path = _write(tmp_path, "page-green.html", html)
+    assert qa_check.run(path, forced_words=1500, is_new=False) == 1
+
+
+def test_incomplete_article_schema_fails(tmp_path):
+    # Drop the author field from the Article JSON-LD -> incomplete schema.
+    html = _passing_optimize_html().replace('"author":{"@type":"Person","name":"Jane Doe"},', "")
     path = _write(tmp_path, "page-green.html", html)
     assert qa_check.run(path, forced_words=1500, is_new=False) == 1
 

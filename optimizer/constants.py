@@ -19,6 +19,9 @@ LINK_BUDGET = [
     (10 ** 9, 10, 6),
 ]
 
+# Stats/freshness: content must use data from this year or later (Rule 12).
+MIN_STAT_YEAR = 2024
+
 # Meta field length gates (qa_check.py).
 META_TITLE_MAX = 60
 # Google truncates the description around 155-160 chars; a slightly shorter one

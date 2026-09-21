@@ -12,6 +12,7 @@ Nothing brand-specific is hard-coded. Set your brand, domain, and URL paths once
 **`config.json`** and the whole system points at your site.
 
 ## Start here
+- **`docs/guide.html`** - a self-contained HTML operator guide (open in a browser): setup, both tracks, every helper, and the QA gate.
 - **`config.json`** - set brand, domain, URL paths, money-page keyword map, and geo-slug list.
 - **`AGENTS.md`** - full context: the 12 quality rules, the 8-lever framework, the 8-step pipeline. Source of truth (`CLAUDE.md` just imports it).
 - **`WORKFLOW.md`** - the per-page runbook.
@@ -50,10 +51,12 @@ Supporting helpers:
 
 ```bash
 python optimizer/next.py                 # rank pending pages by priority (what to do next)
+python optimizer/striking.py             # position 8-20 pages with impressions (highest ROI)
 python optimizer/interlink.py <slug>     # pages that should link TO this one (Checklist #29)
 python optimizer/check_bots.py           # is the live robots.txt allowing AI retrieval bots?
 python optimizer/meta_audit.py           # duplicate meta titles/descriptions across the site
 python optimizer/verify.py add <slug> --keyword "K" --cited chatgpt,perplexity   # Step 9 log
+python optimizer/verify.py report        # roll up citation rates + CTR/position deltas
 ```
 
 No GSC exports yet? Copy the committed sample data and the tooling runs immediately:
@@ -106,12 +109,15 @@ SEO & GEO Optimization/
 │   ├── interlink.py                  Checklist #29: pages that should link TO the target
 │   ├── ledger.py                     Content ledger: record new sections, block future repeats
 │   ├── next.py                       Rank pending pages by priority (what to optimize next)
+│   ├── striking.py                   Striking-distance report (position 8-20 with impressions)
 │   ├── check_bots.py                 robots.txt retrieval-bot access check
 │   ├── meta_audit.py                 Duplicate meta title/description finder
-│   ├── verify.py                     Step 9 post-publish verification log
-│   └── qa_check.py                   QA gate (--new/--keyword; headings, images, JSON-LD, readability)
+│   ├── llms_txt.py                   /llms.txt generator (agent/MCP; not a citation lever)
+│   ├── verify.py                     Step 9 post-publish verification log (+ report rollup)
+│   └── qa_check.py                   QA gate (--new/--keyword; headings, images, JSON-LD, freshness, stats)
+├── docs/guide.html               Self-contained HTML operator guide (open in a browser)
 ├── .github/workflows/ci.yml      CI: pytest + byte-compile on push/PR
-├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, interlink, check_bots, verify, meta_audit)
+├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, striking, interlink, check_bots, verify, meta_audit, llms_txt)
 ├── requirements.txt              openpyxl (runtime) + pytest (dev)
 ├── data/                         scorecard.json, audit.json, content_ledger.json (gitignored)
 │   └── *.example.json            Committed sample data so the tooling runs before real exports

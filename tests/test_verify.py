@@ -36,3 +36,24 @@ def test_list_empty(tmp_path, monkeypatch, capsys):
     _use_temp_log(tmp_path, monkeypatch)
     verify.list_entries()
     assert "empty" in capsys.readouterr().out.lower()
+
+
+def test_summarize_aggregates_engine_rates_and_deltas():
+    entries = [
+        {"page_slug": "a", "cited": {"chatgpt": True, "gemini": False},
+         "ai_overview": "yes", "ctr_delta": "+0.4", "pos_delta": "-3"},
+        {"page_slug": "b", "cited": {"chatgpt": True, "gemini": True},
+         "ai_overview": "no", "ctr_delta": "-0.2", "pos_delta": "-1"},
+    ]
+    s = verify.summarize(entries)
+    assert s["pages"] == 2 and s["entries"] == 2
+    assert s["engine_rates"]["chatgpt"] == (2, 2)   # cited in both
+    assert s["engine_rates"]["gemini"] == (1, 2)    # cited in one
+    assert s["ai_overview"] == (1, 2)
+    assert s["avg_ctr_delta"] == 0.1                # (0.4 + -0.2) / 2
+    assert s["avg_pos_delta"] == -2.0               # (-3 + -1) / 2
+
+
+def test_summarize_empty():
+    s = verify.summarize([])
+    assert s["entries"] == 0 and s["engine_rates"] == {}

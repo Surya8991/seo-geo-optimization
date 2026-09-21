@@ -13,8 +13,10 @@ Vitals**, **#38 Mobile** (beyond `.table-scroll`), **#39 Indexing/canonical/site
 descriptive filenames in `src`); the measurement happens on the live page.
 
 Now auto-checked by `qa_check.py`: **#25 Heading structure** (one H1, no skipped levels),
-**#26** image alt text/filenames, **#28** JSON-LD validity, and **#5/#9** primary-keyword
-placement (with `--keyword`). **#23/#24** meta uniqueness across pages: run `meta_audit.py`.
+**#26** image alt text/filenames, **#28** JSON-LD validity + Article-schema completeness,
+**#21** stale stats (pre-2024 years near a stat), **#50** freshness date, and **#5/#9**
+primary-keyword placement (with `--keyword`). **#23/#24** meta uniqueness across pages: run
+`meta_audit.py`. Find the best targets with `striking.py` (position 8-20) and `next.py`.
 
 ## A. SEARCH VISIBILITY (4 points)
 1. **AI Overview Optimization (AIO)** - Clear 40-60 word definitions at top of sections, "What is X" format, structured data

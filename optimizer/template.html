@@ -153,15 +153,17 @@
   </section>
 </div>
 
-<!-- ===== SCHEMA (JSON-LD) - fill in and keep on publish. See MODERN-SEO-PLAYBOOK.md sec 5.
-     Article + BreadcrumbList always; add HowTo only for real step sequences.
+<!-- ===== SCHEMA (JSON-LD) - fill in and KEEP on publish. See MODERN-SEO-PLAYBOOK.md sec 5.
+     Article + BreadcrumbList always (add HowTo only for real step sequences). qa_check.py
+     requires a present Article to include headline, author, datePublished, dateModified, and
+     a current-year dateModified is what satisfies the freshness gate. Keep these live. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   "headline": "{{H1 / title}}",
   "datePublished": "{{YYYY-MM-DD}}",
-  "dateModified": "{{YYYY-MM-DD}}",
+  "dateModified": "{{YYYY-MM-DD, current-year update date}}",
   "author": { "@type": "Person", "name": "{{author}}", "sameAs": "{{author profile URL}}" },
   "publisher": { "@type": "Organization", "name": "{{BRAND}}" },
   "mainEntityOfPage": "{{canonical page URL}}"
@@ -178,7 +180,11 @@
   ]
 }
 </script>
-===== -->
+<!-- Add HowTo only for a real step sequence:
+<script type="application/ld+json">
+{ "@context": "https://schema.org", "@type": "HowTo", "name": "{{task}}", "step": [] }
+</script>
+-->
 
 <!-- ===== FAQ JSON-LD - Google-preferred schema. Every Question/answer here MUST match a
      visible accordion item above word for word. qa_check.py enforces the count parity. ===== -->

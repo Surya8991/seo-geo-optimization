@@ -12,9 +12,11 @@ python optimizer/qa_check.py "final output/{slug}-green.html" --words <reader_wo
 ```
 
 Beyond the 12 rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
-skipped levels), that every `<img>` has descriptive alt text and a non-generic filename, and
-that every JSON-LD block parses as valid JSON. Run `optimizer/meta_audit.py` separately to find
-duplicate meta titles/descriptions across the site.
+skipped levels); that every `<img>` has descriptive alt text and a non-generic filename; that
+every JSON-LD block parses and a present Article carries headline/author/datePublished/
+dateModified; a current-year freshness date (dateModified or a visible "last updated"); and no
+pre-2024 statistics (a year before 2024 sitting next to a stat signal). Run
+`optimizer/meta_audit.py` separately to find duplicate meta titles/descriptions across the site.
 
 | # | Rule | Pass criteria | Check |
 |---|------|---------------|-------|
@@ -31,7 +33,7 @@ duplicate meta titles/descriptions across the site.
 | 9 | American English | No British spellings (`-ise/-isation/-our/-re`, colour, behaviour, etc.) | AUTO |
 | 10 | No AI signals | No em dashes; varied sentences; no filler ("In today's rapidly evolving...", "It's worth noting...") | AUTO (dashes) + MANUAL (voice) |
 | 11 | FAQ quality + limits | FAQs target PAA / new angles, not body rehash; count band by words; HTML items == JSON-LD entries | AUTO (count) + MANUAL (angle) |
-| 12 | Stat verification | Every stat real, sourced, and 2024-2026; unverifiable stats removed | MANUAL |
+| 12 | Stat verification | Every stat real, sourced, and 2024-2026; unverifiable stats removed | AUTO (flags pre-2024 years near a stat) + MANUAL (real/sourced) |
 
 ## Link budget bands (Rule 3)
 
