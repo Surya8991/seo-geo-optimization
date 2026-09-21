@@ -111,7 +111,7 @@ SEO & GEO Optimization/
 │   ├── verify.py                     Step 9 post-publish verification log
 │   └── qa_check.py                   QA gate (--new/--keyword; headings, images, JSON-LD, readability)
 ├── .github/workflows/ci.yml      CI: pytest + byte-compile on push/PR
-├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, interlink, check_bots, verify)
+├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, interlink, check_bots, verify, meta_audit)
 ├── requirements.txt              openpyxl (runtime) + pytest (dev)
 ├── data/                         scorecard.json, audit.json, content_ledger.json (gitignored)
 │   └── *.example.json            Committed sample data so the tooling runs before real exports

@@ -113,16 +113,19 @@ natural. ZERO em/en dashes. American English only. Specifically:
 Then generate 3 meta-title/description options based on what the article actually contains.
 
 ## STEP 8 - QA gate, ledger, save
-Run the automated gate with the reader-facing word count for the right link band:
+Run the automated gate with the reader-facing word count for the right link band, plus the
+primary keyword so placement is checked:
 
 ```bash
-python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count>
+python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count> --keyword "<primary keyword>"
+python optimizer/meta_audit.py   # confirm this page's meta title/description are unique site-wide
 ```
 
-All hard checks must pass, including the changes-summary table; aim for Flesch 60+. Then the
-manual checks the tool cannot do: re-score the 50-point checklist (PASS-before vs PASS-after),
-spot-check 3-4 external sources, read for flow and readability, and confirm no new section or
-FAQ conflicts with another page.
+All hard checks must pass: the changes-summary table, heading hierarchy (one H1, no skipped
+levels), image alt text, primary-keyword placement, and valid JSON-LD parsing; aim for Flesch
+60+. Then the manual checks the tool cannot do: re-score the 50-point checklist (PASS-before vs
+PASS-after), spot-check 3-4 external sources, read for flow and readability, and confirm no new
+section or FAQ conflicts with another page.
 
 Record every NEW section in the content ledger so future pages do not repeat it:
 

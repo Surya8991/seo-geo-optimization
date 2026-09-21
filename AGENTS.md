@@ -46,7 +46,7 @@ Open `config.json` and set:
 - `data/verification_log.json` - post-publish verification results (created on first `verify.py add`).
 - `data/*.example.json` - committed sample scorecard/audit so the tooling runs before you have GSC exports.
 - `.github/workflows/ci.yml` - CI: runs the pytest suite and byte-compiles all Python on every push/PR.
-- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py` (`pip install -r requirements.txt && pytest`).
+- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py`, `next.py`, `interlink.py`, `check_bots.py`, `verify.py`, `meta_audit.py` (`pip install -r requirements.txt && pytest`).
 - `WORKFLOW.md` - the per-page operating procedure (optimize-existing track), including Step 9 post-publish verification.
 - `.claude/commands/optimize-page.md` - optimize an existing page (`/optimize-page <slug>`).
 - `.claude/commands/new-page.md` - create a new page from scratch (`/new-page <topic>`).
