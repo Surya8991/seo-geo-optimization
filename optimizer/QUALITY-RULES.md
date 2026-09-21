@@ -5,17 +5,22 @@ verified. `AUTO` = enforced by `qa_check.py`. `MANUAL` = human judgment required
 `AGENTS.md` is the authoritative wording; this is the checklist you run against.
 Wherever this says "the brand" or `example.com`, the real values come from `config.json`.
 
-Run the gate before saving any output:
+Run the gate before saving any output (pass `--keyword` to also check primary-keyword placement):
 
 ```bash
-python optimizer/qa_check.py "final output/{slug}-green.html" --words <reader_word_count>
+python optimizer/qa_check.py "final output/{slug}-green.html" --words <reader_word_count> --keyword "<primary keyword>"
 ```
+
+Beyond the 12 rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
+skipped levels), that every `<img>` has descriptive alt text and a non-generic filename, and
+that every JSON-LD block parses as valid JSON. Run `optimizer/meta_audit.py` separately to find
+duplicate meta titles/descriptions across the site.
 
 | # | Rule | Pass criteria | Check |
 |---|------|---------------|-------|
 | 1 | Zero em dashes | Count of em dashes = 0 (in tables use a real value or a blank cell) | AUTO |
 | 1b | Zero en dashes / double-hyphen breaks | Count of en dashes = 0; no ` -- ` as a sentence break | AUTO |
-| 2 | No keyword stuffing | Primary keyword in title, H1, meta desc, URL, first 100 words, conclusion - max 5-6 total | MANUAL |
+| 2 | No keyword stuffing | Primary keyword in title, H1, meta desc, URL, first 100 words, conclusion - max 5-6 total | AUTO (placement + count, pass `--keyword`) + MANUAL |
 | 3 | Link budget | Internal + external within the word-count band table; **max 1 link per paragraph**. **Never link to country/city pages** (e.g., example.com/australia/, example.com/india/). Only link to generic money/course pages (example.com/&lt;slug&gt;/), category pages, or other content pages. | AUTO |
 | 3b | Link relevancy | Every link passes "would a reader actually click this here?" No filler sentences to justify a link | MANUAL |
 | 4 | No CTA anchor text | No "Explore / Discover / Get Started / Learn More / View All / Check Out / Try / Click Here / Read More" as anchor text | AUTO |

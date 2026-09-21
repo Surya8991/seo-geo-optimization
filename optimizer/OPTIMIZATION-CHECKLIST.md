@@ -5,11 +5,16 @@ Wherever this says "the brand" or `example.com`, the real values come from `conf
 **Scope note (publish / CMS / site layer).** A few points cannot be satisfied inside the
 self-contained HTML fragment this pipeline outputs; they live at the CMS, template, or
 site-wide layer. Do not score them PASS from the fragment. Instead, note them in the review
-copy as "verify at publish": **#26 Image SEO** (real image files, WebP, compression),
-**#29 Internal links inbound** (links FROM other pages, a site-wide task), **#37 Core Web
+copy as "verify at publish": **#26 Image SEO** (real image files, WebP, compression; note that
+`qa_check.py` DOES auto-check alt text and generic filenames), **#29 Internal links inbound**
+(links FROM other pages, a site-wide task; `interlink.py` finds the sources), **#37 Core Web
 Vitals**, **#38 Mobile** (beyond `.table-scroll`), **#39 Indexing/canonical/sitemap**, and
 **#40 Page Speed**. The fragment can only prepare for these (alt text, `.table-scroll`,
 descriptive filenames in `src`); the measurement happens on the live page.
+
+Now auto-checked by `qa_check.py`: **#25 Heading structure** (one H1, no skipped levels),
+**#26** image alt text/filenames, **#28** JSON-LD validity, and **#5/#9** primary-keyword
+placement (with `--keyword`). **#23/#24** meta uniqueness across pages: run `meta_audit.py`.
 
 ## A. SEARCH VISIBILITY (4 points)
 1. **AI Overview Optimization (AIO)** - Clear 40-60 word definitions at top of sections, "What is X" format, structured data

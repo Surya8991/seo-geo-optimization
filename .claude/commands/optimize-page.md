@@ -92,10 +92,11 @@ Then generate 3 meta options from the actual content.
 
 ## Step 8 - QA gate, ledger, save
 ```bash
-python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count>
+python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count> --keyword "<primary keyword>"
+python optimizer/meta_audit.py   # confirm this page's meta title/description are unique site-wide
 ```
-Every hard check must pass (including the changes-summary table and valid JSON-LD parsing); aim
-for Flesch 60+. Then the manual checks: re-score the 50-point checklist (PASS-before vs
+Every hard check must pass (including the changes-summary table, heading hierarchy, image alt
+text, keyword placement, and valid JSON-LD parsing); aim for Flesch 60+. Then the manual checks: re-score the 50-point checklist (PASS-before vs
 PASS-after), spot-check 3-4 external sources, read for flow, confirm no cannibalization. Record
 every NEW section so future pages do not repeat it:
 

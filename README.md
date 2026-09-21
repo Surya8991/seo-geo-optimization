@@ -52,6 +52,7 @@ Supporting helpers:
 python optimizer/next.py                 # rank pending pages by priority (what to do next)
 python optimizer/interlink.py <slug>     # pages that should link TO this one (Checklist #29)
 python optimizer/check_bots.py           # is the live robots.txt allowing AI retrieval bots?
+python optimizer/meta_audit.py           # duplicate meta titles/descriptions across the site
 python optimizer/verify.py add <slug> --keyword "K" --cited chatgpt,perplexity   # Step 9 log
 ```
 
@@ -106,8 +107,9 @@ SEO & GEO Optimization/
 │   ├── ledger.py                     Content ledger: record new sections, block future repeats
 │   ├── next.py                       Rank pending pages by priority (what to optimize next)
 │   ├── check_bots.py                 robots.txt retrieval-bot access check
+│   ├── meta_audit.py                 Duplicate meta title/description finder
 │   ├── verify.py                     Step 9 post-publish verification log
-│   └── qa_check.py                   QA gate (optimize + --new modes, JSON-LD + readability)
+│   └── qa_check.py                   QA gate (--new/--keyword; headings, images, JSON-LD, readability)
 ├── .github/workflows/ci.yml      CI: pytest + byte-compile on push/PR
 ├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, interlink, check_bots, verify)
 ├── requirements.txt              openpyxl (runtime) + pytest (dev)

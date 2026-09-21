@@ -153,9 +153,63 @@ def invalid_jsonld_blocks(html):
             bad.append((i, str(e).split("\n")[0]))
     return bad
 
+
+def heading_levels(html):
+    """Ordered list of heading levels (1-6) in the document, comments stripped."""
+    html = re.sub(r"<!--[\s\S]*?-->", " ", html)
+    return [int(m.group(1)) for m in re.finditer(r"<h([1-6])[\s>]", html, re.I)]
+
+
+def heading_hierarchy_errors(levels):
+    """Report a missing/duplicate H1 and any skipped level (e.g. H2 jumping to H4)."""
+    errors = []
+    n_h1 = levels.count(1)
+    if n_h1 != 1:
+        errors.append(f"expected exactly one H1, found {n_h1}")
+    prev = None
+    for lv in levels:
+        if prev is not None and lv > prev + 1:
+            errors.append(f"skipped level: H{prev} to H{lv}")
+        prev = lv
+    return errors
+
+
+_GENERIC_IMG_RE = re.compile(
+    r"(image\d+|img[_-]?\d+|dsc[_-]?\d+|screenshot|untitled|photo\d+|unnamed)\.", re.I)
+
+
+def image_issues(html):
+    """Report <img> tags missing/empty alt text or using a generic filename."""
+    html = re.sub(r"<!--[\s\S]*?-->", " ", html)
+    issues = []
+    for tag in re.findall(r"<img\s[^>]*>", html, re.I):
+        alt = re.search(r'\balt="([^"]*)"', tag, re.I)
+        if not alt or not alt.group(1).strip():
+            issues.append("missing/empty alt")
+        src = re.search(r'\bsrc="([^"]*)"', tag, re.I)
+        if src and _GENERIC_IMG_RE.search(src.group(1)):
+            issues.append("generic filename: " + src.group(1))
+    return issues
+
+
+def keyword_placement(html, text, h1_text, meta_title, keyword):
+    """Where the primary keyword lands: title/H1/first-100-words/conclusion + total count."""
+    kw = keyword.lower().strip()
+    tl = text.lower()
+    first100 = " ".join(text.split()[:100]).lower()
+    concl_m = re.search(r"<h2[^>]*>\s*conclusion[\s\S]*", html, re.I)
+    concl_text = strip_tags(concl_m.group(0)).lower() if concl_m else None
+    return {
+        "in_title": kw in (meta_title or "").lower(),
+        "in_h1": kw in (h1_text or "").lower(),
+        "in_first_100": kw in first100,
+        "in_conclusion": (kw in concl_text) if concl_text is not None else None,
+        "count": tl.count(kw),
+    }
+
 # ---- checks ----------------------------------------------------------------
 
-def run(path, forced_words=None, is_new=False):
+def run(path, forced_words=None, is_new=False, keyword=None):
     with open(path, encoding="utf-8") as f:
         html = f.read()
 
@@ -269,6 +323,28 @@ def run(path, forced_words=None, is_new=False):
     check(not bad_ld, "JSON-LD blocks parse as valid JSON",
           "; ".join(f"block {i}: {err}" for i, err in bad_ld[:3]))
 
+    # 15c. Heading hierarchy: one H1, no skipped levels (AI parse map)
+    h_errors = heading_hierarchy_errors(heading_levels(html))
+    check(not h_errors, "Heading hierarchy (one H1, no skipped levels)", "; ".join(h_errors[:4]))
+
+    # 15d. Image SEO: every <img> has alt text and a non-generic filename
+    img_probs = image_issues(html)
+    check(not img_probs, "Images have descriptive alt + filename", "; ".join(img_probs[:4]))
+
+    # 15e. Primary-keyword placement (only when --keyword is supplied; Rule 2)
+    if keyword:
+        h1_text = strip_tags(h1.group(1)).strip() if h1 else ""
+        title_txt = mt.group(2).strip() if mt else ""
+        kp = keyword_placement(html, text, h1_text, title_txt, keyword)
+        check(kp["in_h1"], f'Primary keyword "{keyword}" in H1')
+        check(kp["in_first_100"], f'Primary keyword in first 100 words')
+        check(1 <= kp["count"] <= 6, "Primary keyword not stuffed (1-6 uses)", f'{kp["count"]} uses')
+        if kp["in_conclusion"] is None:
+            info.append(("Primary keyword in conclusion", "no Conclusion H2 found to check"))
+        else:
+            check(kp["in_conclusion"], "Primary keyword in conclusion")
+        info.append(("Primary keyword in meta title", "yes" if kp["in_title"] else "NO (add it)"))
+
     # 16. Rough tag balance (ignore tags inside HTML comments, e.g. template examples)
     html_no_comments = re.sub(r"<!--[\s\S]*?-->", " ", html)
     for tag in ["div", "p", "table", "section"]:
@@ -321,5 +397,7 @@ if __name__ == "__main__":
     ap.add_argument("--words", type=int, default=None, help="reader-facing word count for link budget")
     ap.add_argument("--new", action="store_true",
                     help="new-blog mode: expect clean HTML (no diff markers or changes-summary)")
+    ap.add_argument("--keyword", default=None,
+                    help="primary keyword: check placement in title/H1/first-100/conclusion (Rule 2)")
     a = ap.parse_args()
-    sys.exit(run(a.file, a.words, a.new))
+    sys.exit(run(a.file, a.words, a.new, a.keyword))

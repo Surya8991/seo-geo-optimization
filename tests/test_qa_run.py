@@ -43,7 +43,7 @@ def _passing_optimize_html():
 <a href="https://www.gallup.com/report-2026" rel="nofollow" target="_blank">Gallup</a>.</p>
 </div>
 <h2>Conclusion</h2>
-<p>The topic rewards a methodical, well documented approach.</p>
+<p>Strong product certification content rewards a methodical, well documented approach.</p>
 <div class="note" style="background:#eef7f0">
 <strong>Changes summary</strong>
 <div class="table-scroll"><table class="changes-summary">
@@ -150,6 +150,26 @@ def test_broken_jsonld_fails(tmp_path):
         '"acceptedAnswer":{"@type":"Answer","text":"Most candidates finish within a few months."}}]}',
         '"acceptedAnswer":{"@type":"Answer","text":"Most candidates finish within a few months."}},]}',
     )
+    path = _write(tmp_path, "page-green.html", html)
+    assert qa_check.run(path, forced_words=1500, is_new=False) == 1
+
+
+def test_keyword_placement_passes_with_keyword(tmp_path):
+    path = _write(tmp_path, "page-green.html", _passing_optimize_html())
+    assert qa_check.run(path, forced_words=1500, is_new=False, keyword="product certification") == 0
+
+
+def test_skipped_heading_level_fails(tmp_path):
+    # Turn the H3 into an H4 so H2 -> H4 skips a level.
+    html = _passing_optimize_html().replace("<h3>Certification costs in 2026</h3>",
+                                            "<h4>Certification costs in 2026</h4>")
+    path = _write(tmp_path, "page-green.html", html)
+    assert qa_check.run(path, forced_words=1500, is_new=False) == 1
+
+
+def test_image_without_alt_fails(tmp_path):
+    html = _passing_optimize_html().replace(
+        "<h2>Conclusion</h2>", '<p><img src="/img/chart.png"></p>\n<h2>Conclusion</h2>')
     path = _write(tmp_path, "page-green.html", html)
     assert qa_check.run(path, forced_words=1500, is_new=False) == 1
 

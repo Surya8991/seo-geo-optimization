@@ -84,10 +84,11 @@ Then produce 3 meta-title/description options from the actual content.
 
 ## Step 6 - QA gate, ledger, save
 ```bash
-python optimizer/qa_check.py "final output/<slug>.html" --words <reader_word_count> --new
+python optimizer/qa_check.py "final output/<slug>.html" --words <reader_word_count> --new --keyword "<primary keyword>"
+python optimizer/meta_audit.py   # confirm the new meta title/description are unique site-wide
 ```
-All hard checks must pass (including valid JSON-LD parsing); aim for a Flesch reading ease of
-60+. Then record every substantive new section so future pages do not repeat it:
+All hard checks must pass (heading hierarchy, image alt text, keyword placement, valid JSON-LD);
+aim for a Flesch reading ease of 60+. Then record every substantive new section so future pages do not repeat it:
 
 ```bash
 python optimizer/ledger.py add <slug> --section "<H2 title>" --angle "<what makes it unique>" --asset "<any unique table/data>"

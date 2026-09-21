@@ -35,7 +35,8 @@ Open `config.json` and set:
 - `optimizer/lookup.py` - Step 1: merge scorecard + audit into one brief with the lever to pull.
 - `optimizer/cannibal.py` - Rule 6: check if another page, blog, or past build already owns a subtopic (reads the content ledger too).
 - `optimizer/ledger.py` - the content ledger: record new sections so future pages do not repeat them (`add` / `list` / `search`).
-- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages. Reports a Flesch readability score. Also validates that every JSON-LD block parses.
+- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages; `--keyword` checks primary-keyword placement (Rule 2). Also validates heading hierarchy (one H1, no skipped levels), image alt text/filenames, and JSON-LD parsing. Reports a Flesch readability score.
+- `optimizer/meta_audit.py` - find duplicate meta titles/descriptions across the site (reads audit.json).
 - `optimizer/next.py` - rank pending pages by priority (skips ones already built) to pick the next page to optimize.
 - `optimizer/interlink.py` - inbound-link finder (Checklist #29): existing pages that should link TO the page being optimized.
 - `optimizer/check_bots.py` - fetch the live `robots.txt` and report whether the AI retrieval/search bots are allowed (a make-or-break GEO lever).
