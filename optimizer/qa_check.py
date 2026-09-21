@@ -22,9 +22,12 @@ import re
 import argparse
 
 from config_loader import CONFIG
+from constants import LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX
 
 BRAND = CONFIG["brand_name"]
-DOMAIN = CONFIG["domain"].lower().lstrip("www.")
+# Strip a leading "www." PREFIX only. str.lstrip removes a character SET, so the
+# old lstrip("www.") mangled any domain starting with w/. (e.g. wine.com).
+DOMAIN = re.sub(r"^www\.", "", CONFIG["domain"].lower())
 MAX_BRAND = int(CONFIG.get("max_brand_mentions", 1))
 COUNTRY_SLUGS = set(CONFIG.get("country_slugs", []))
 
@@ -44,21 +47,44 @@ BRITISH_PATTERNS = [
     r"\bcentre\b", r"\blicence\b", r"\bdefence\b", r"\bprogramme\b",
     r"\bcatalogue\b", r"\bfulfil\b", r"\bmodelling\b", r"\blabelled\b",
 ]
-BRITISH_ALLOW = {
+_BRITISH_RE = re.compile("|".join(BRITISH_PATTERNS), re.I)
+
+# Words that legitimately end in -ise/-ised/-ising in American English. The broad
+# \w+ise pattern would otherwise flag these (advertise, improvise, supervise ...).
+_AMERICAN_ISE_BASES = {
     "rise", "wise", "advise", "revise", "surprise", "comprise", "exercise",
     "franchise", "arise", "expertise", "precise", "concise", "promise",
-    "premise", "otherwise", "likewise", "raised", "praised", "advised",
-    "revised", "surprised", "supervised", "devised", "noise", "poise",
-    "cruise", "paradise", "merchandise", "compromise", "enterprise",
-    "rising", "advising", "revising", "surprising", "raising", "praising",
+    "premise", "otherwise", "likewise", "raise", "praise", "supervise",
+    "devise", "noise", "poise", "cruise", "paradise", "merchandise",
+    "compromise", "enterprise", "advertise", "improvise", "despise",
+    "disguise", "excise", "incise", "chastise", "reprise", "demise", "guise",
+    "clockwise", "crosswise", "lengthwise", "expertise", "excise",
 }
 
-LINK_BUDGET = [   # (max_words, internal_max, external_max)
-    (2000, 4, 3),
-    (4000, 7, 4),
-    (6000, 9, 5),
-    (10**9, 10, 6),
-]
+
+def _ise_forms(bases):
+    """Base plus its -ed/-ing/-s inflections, so 'supervise' also allows 'supervised'."""
+    out = set()
+    for b in bases:
+        out.add(b)
+        out.add(b + "s")
+        if b.endswith("e"):
+            out.add(b[:-1] + "ed")
+            out.add(b[:-1] + "ing")
+    return out
+
+
+BRITISH_ALLOW = _ise_forms(_AMERICAN_ISE_BASES)
+
+
+def find_british_spellings(text):
+    """Return the sorted unique British-spelled words in text (allowlist applied)."""
+    brit = []
+    for m in _BRITISH_RE.finditer(text):
+        w = m.group(0).lower()
+        if w not in BRITISH_ALLOW:
+            brit.append(w)
+    return sorted(set(brit))
 
 # Build a regex that matches <domain>/<country-slug>/ in a URL (from config).
 if COUNTRY_SLUGS:
@@ -157,19 +183,15 @@ def run(path, forced_words=None, is_new=False):
     check(not cta_hits, "No CTA-style anchor text", "; ".join(cta_hits[:5]))
 
     # 8. British spellings
-    brit = []
-    for m in re.finditer("|".join(BRITISH_PATTERNS), text, re.I):
-        w = m.group(0).lower()
-        if w not in BRITISH_ALLOW:
-            brit.append(w)
-    brit = sorted(set(brit))
+    brit = find_british_spellings(text)
     check(not brit, "American English only", ", ".join(brit[:8]))
 
     # 9. Meta title length
     mt = re.search(r"Meta title\s*\((\d+)\s*/\s*\d+\)\s*:</strong>\s*([^<]+)", html)
     if mt:
         title_txt = mt.group(2).strip()
-        check(len(title_txt) <= 60, "Meta title <= 60 chars", f"{len(title_txt)} chars: {title_txt}")
+        check(len(title_txt) <= META_TITLE_MAX, f"Meta title <= {META_TITLE_MAX} chars",
+              f"{len(title_txt)} chars: {title_txt}")
     else:
         check(False, "Meta title field present", "not found in publishing-fields box")
 
@@ -177,7 +199,8 @@ def run(path, forced_words=None, is_new=False):
     md = re.search(r"Meta description\s*\((\d+)\s*/\s*\d+\)\s*:</strong>\s*([^<]+)", html)
     if md:
         desc = md.group(2).strip()
-        check(150 <= len(desc) <= 155, "Meta description 150-155 chars", f"{len(desc)} chars")
+        check(META_DESC_MIN <= len(desc) <= META_DESC_MAX,
+              f"Meta description {META_DESC_MIN}-{META_DESC_MAX} chars", f"{len(desc)} chars")
     else:
         check(False, "Meta description field present", "not found in publishing-fields box")
 
@@ -195,10 +218,14 @@ def run(path, forced_words=None, is_new=False):
 
     # 13. Review markers (optimize mode only). New pages ship clean, no diff markers.
     if is_new:
-        no_removes = ".remove-block" not in html
-        check(no_removes, "New page: no leftover removal markers", "found .remove-block")
+        # Match the real markup (class="remove-block" / class="new-block"), not a
+        # ".remove-block" CSS-selector string that never appears in the HTML body.
+        has_remove = bool(re.search(r'class="[^"]*\bremove-block\b', html))
+        has_new = bool(re.search(r'class="[^"]*\bnew-block\b', html))
+        check(not has_remove, "New page: no leftover removal markers", "found remove-block")
+        check(not has_new, "New page: no leftover addition markers", "found new-block")
     else:
-        check(".new-block" in html or 'class="new-block"' in html, "new-block used for additions")
+        check(bool(re.search(r'class="[^"]*\bnew-block\b', html)), "new-block used for additions")
         # 13b. End "changes summary" table documenting what was done
         check("changes-summary" in html, "Changes summary table present",
               'add a table with class="changes-summary" listing section / action / reason')
@@ -218,10 +245,11 @@ def run(path, forced_words=None, is_new=False):
     else:
         check(faq_html > 0, "FAQ present (microdata)", f"{faq_html} questions; no JSON-LD script block")
 
-    # 16. Rough tag balance
+    # 16. Rough tag balance (ignore tags inside HTML comments, e.g. template examples)
+    html_no_comments = re.sub(r"<!--[\s\S]*?-->", " ", html)
     for tag in ["div", "p", "table", "section"]:
-        o = len(re.findall(rf"<{tag}[\s>]", html, re.I))
-        c = len(re.findall(rf"</{tag}>", html, re.I))
+        o = len(re.findall(rf"<{tag}[\s>]", html_no_comments, re.I))
+        c = len(re.findall(rf"</{tag}>", html_no_comments, re.I))
         check(o == c, f"<{tag}> balanced", f"open={o} close={c}")
 
     # 17. No country/city page links

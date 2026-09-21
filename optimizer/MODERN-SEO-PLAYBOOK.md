@@ -25,8 +25,9 @@ AI citation correlates with classic ranking: pages that rank well are far likeli
 cited. Do not treat GEO as a replacement.
 - Primary keyword in title, H1, meta description, URL, first 100 words, conclusion (Rule 2).
 - Search intent match: the format mirrors what the top 3 SERP results are (list, guide, comparison).
-- Clean H1 > H2 > H3 hierarchy, one H1, no skipped levels. Strict heading hierarchy strongly
-  correlates with getting cited by AI (Seer Interactive / BrightEdge, 2026).
+- Clean H1 > H2 > H3 hierarchy, one H1, no skipped levels. 2026 analyses report that pages
+  with a clean, sequential heading structure are cited markedly more often than pages with a
+  flat or broken hierarchy (see Sources; figure varies by study).
 - Internal links to the topic cluster + money page; external links to authoritative sources.
 - Freshness: current-year references, updated date visible, stats from 2024-2026.
 - Mobile, fast, indexable, tables in `.table-scroll`.
@@ -34,8 +35,9 @@ cited. Do not treat GEO as a replacement.
 ## 2. AEO - Answer Engine Optimization (win PAA, snippets, AI Overviews)
 Goal: be the passage Google lifts into a snippet or AI Overview.
 - **Answer-first blocks.** Open each key section with a direct 40-60 word answer to the
-  implied question, then expand. **44% of LLM citations come from the first 30% of the page**
-  (SparkToro, 2026), so lead with the answer, never bury it.
+  implied question, then expand. An analysis of ~1.2M AI answers found **~44% of citations
+  come from the first 30% of the page** (Search Engine Land / Kevin Indig, 2026), so lead with
+  the answer, never bury it.
 - **"What is X" definitions.** Every core concept gets a clean one-sentence definition a
   machine can lift, as the opening line of each definitional H2.
 - **Question-shaped headings.** Phrase some H2/H3s as the actual question a searcher types
@@ -52,10 +54,11 @@ Goal: be the passage Google lifts into a snippet or AI Overview.
 ## 3. GEO - Generative Engine Optimization (get cited by LLMs)
 Goal: be a source the model quotes. Research on generative engines is consistent on what
 lifts citation share:
-- **Cite statistics.** Adding relevant statistics increases AI visibility by roughly **40%**
-  (GEO research, Aggarwal et al.). Every claim that can carry a number should.
-- **Add citations and quotations.** Direct quotes and cited sources boost visibility by up
-  to **41%**. Attribute to named authorities (Gallup, McKinsey, Harvard) with the year.
+- **Cite statistics.** Adding relevant statistics increased source visibility by up to **40%**
+  in the controlled Princeton GEO study (Aggarwal et al., arXiv 2311.09735, KDD 2024; the 40%
+  is a relative maximum, not an average). Every claim that can carry a number should.
+- **Add citations and quotations.** Direct quotes and cited sources boosted visibility by up
+  to **41%** in the same study. Attribute to named authorities (Gallup, McKinsey, Harvard) with the year.
 - **Original, verifiable data.** A unique stat, worked example, framework, or table that
   exists nowhere else is the single strongest citation magnet. Give the numbers, the formula,
   the result.
@@ -72,21 +75,22 @@ lifts citation share:
 - **Entity clarity.** Name entities explicitly and consistently (full product, company,
   framework, and role names, not pronouns or abbreviations on first use). Link core entities
   to their canonical pages so the model can disambiguate.
-- **Author + E-E-A-T signals.** Only about 4% of AI-cited content has an attributed author,
-  and authored content earns far more citations. Ensure a real author/reviewer with
-  credentials is present (Article/Author schema, "reviewed by"). First-hand experience,
-  examples, and case studies are the March-2025-core and helpful-content signals.
-- **Structured data.** About **68% of AI-cited pages carry structured data (double the web
-  average)**. Add it, but note the ranking driver is content quality and structure, not the
-  markup type. Use the schema set in section 5.
+- **Author + E-E-A-T signals.** Authored content with verifiable credentials is cited more
+  than anonymous content; 2026 analyses find `Person`/author schema appears far more often on
+  AI-cited pages than across the web at large. Ensure a real author/reviewer with credentials
+  is present (Article/Author schema, "reviewed by"). First-hand experience, examples, and case
+  studies are the March-2025-core and helpful-content signals.
+- **Structured data.** AI-cited pages carry structured data at well above the web-average rate
+  in 2026 analyses. Add it, but note the ranking driver is content quality and structure, not
+  the markup type. Use the schema set in section 5.
 - **Heading hierarchy as a parse map.** The H1>H2>H3 tree is how a model finds the passage.
   Keep it strict and descriptive so each answer sits under a heading that names its question.
-- **Freshness cadence.** About 60% of AI-cited sources rotate month to month; a current
+- **Freshness cadence.** A large share of AI-cited sources rotate month to month; a current
   "last updated" date and 2024-2026 stats keep a page in the citable set.
-- **Off-site authority (flag, mostly beyond one page edit).** Roughly **85% of AI citations
-  come from third-party / earned media**, not the brand's own site. A single page cannot fix
-  this, but note where the topic needs external corroboration and raise it for the wider
-  content strategy.
+- **Off-site authority (flag, mostly beyond one page edit).** 2026 earned-media analyses
+  report that the large majority (~85% in some studies) of AI citations come from third-party
+  / earned media, not the brand's own site. A single page cannot fix this, but note where the
+  topic needs external corroboration and raise it for the wider content strategy.
 - **llms.txt (site-level, not per-page).** An emerging `/llms.txt` convention exists; Google
   has said it does not use it and schema type does not predict citation volume. Do not block
   a page on it. Note it once for the site owner and move on.
@@ -143,11 +147,30 @@ probabilistic.
 - [ ] JSON-LD: Article + FAQPage + BreadcrumbList (+ HowTo/Author when applicable).
 - [ ] Off-site authority gaps noted for the wider strategy (do not block the page).
 
-## Sources (2026)
-- SparkToro, 2026 - 44% of LLM citations come from the first 30% of page content.
-- GEO research (Aggarwal et al., "Generative Engine Optimization") - statistics +~40%, citations/quotations +~41%.
-- Seer Interactive / BrightEdge, 2026 - strict heading hierarchy correlates with AI citation.
-- Presenc AI, 2026 - named/authored content earns ~60% more AI citations than anonymous.
-- Muck Rack, 2026 - ~85% of non-paid AI citations come from earned media / third-party pages.
-- Search Engine Land, "Generative engine optimization (GEO)", Feb 2026.
-- Writer.com, "GEO, AEO, and SEO in 2026", Jul 2026.
+## Sources
+
+**Read before citing any of these in published copy (Rule 12).** GEO is a fast-moving,
+study-heavy field; the peer-reviewed figure below is solid, the rest are third-party 2026
+analyses whose exact numbers vary by methodology and sample. Treat them as directional, and
+re-verify the specific number against the linked primary source before putting it on a page.
+
+Primary / peer-reviewed:
+- **Princeton GEO study** - Aggarwal et al., "GEO: Generative Engine Optimization", arXiv
+  2311.09735 (KDD 2024). Statistics and citations/quotations each lifted source visibility by
+  up to ~40-41% (a relative maximum on the Position-Adjusted Word Count metric, not an average).
+  https://arxiv.org/abs/2311.09735
+
+Third-party 2026 analyses (directional; re-verify before quoting a number):
+- **~44% of AI citations come from the first 30% of content** - analysis of ~1.2M AI answers /
+  18,012 citations (Kevin Indig; reported by Search Engine Land, 2026).
+  https://searchengineland.com/chatgpt-citations-content-study-469483
+- **Clean heading hierarchy correlates with more citations** - e.g. pages with a sequential
+  H1>H2>H3 structure cited materially more often (Blck Alpaca, 2026).
+  https://blckalpaca.at/en/knowledge-base/seo-geo/on-page-seo/heading-hierarchy-28x-more-ai-citations-with-correct-structure
+- **Author/`Person` schema over-represented on AI-cited pages; authored content out-cites
+  anonymous** - 2026 citation-factor analyses (e.g. The Digital Bloom AI Visibility Report).
+  https://thedigitalbloom.com/learn/2025-ai-citation-llm-visibility-report/
+- **Majority of AI citations trace to third-party / earned media** (~85% in some studies) -
+  2026 earned-media analyses. https://authoritytech.io/curated/jaxon-parrott-earned-media-framework-ai-search-brand-citations-2026
+- General GEO/AEO/SEO overviews for context: Search Engine Land's GEO coverage; Writer.com,
+  "GEO, AEO, and SEO in 2026".

@@ -59,7 +59,8 @@ The blue publishing-fields box must keep this exact label format:
 <strong>Meta description (NN/155):</strong> ...
 ```
 
-`qa_check.py` parses those labels to verify length. Meta title <= 60, meta description 150-155.
+`qa_check.py` parses those labels to verify length. Meta title <= 60. Meta description must be
+140-160 chars (target ~150-155); the gate accepts 140-160 so valid copy near the cap does not FAIL.
 
 ## What `qa_check.py` does NOT check (always do by hand)
 

@@ -1,0 +1,46 @@
+{
+  "_comment": "Sample audit strategy data to pair with scorecard.example.json. Copy to audit.json to try the pipeline offline. Regenerate the real file with `python build_scorecard.py`.",
+  "audit_rows": [
+    {
+      "url": "https://www.example.com/info/product-certification",
+      "slug": "info/product-certification",
+      "title": "Product Certification: A Complete Guide",
+      "meta_title": "Product Certification Guide (2026)",
+      "meta_description": "What product certification is, how it works, and how to get certified, with 2026 requirements, costs, and timelines explained in one practical guide.",
+      "h1_tag": "Product Certification: The Complete 2026 Guide",
+      "meta_keywords": "product certification, certification process",
+      "primary_keyword": "product certification",
+      "search_intent": "informational",
+      "money_page": "https://www.example.com/product-a/",
+      "money_page_name": "Product A Certification Course",
+      "category": "Top Performers Falling",
+      "priority_score": 82,
+      "action": "PROTECT"
+    },
+    {
+      "url": "https://www.example.com/info/agile-scrum-fundamentals",
+      "slug": "info/agile-scrum-fundamentals",
+      "title": "Agile Scrum Fundamentals",
+      "meta_title": "Agile Scrum Fundamentals Explained",
+      "meta_description": "A plain-English introduction to agile scrum: roles, ceremonies, artifacts, and how teams use the framework to ship work in short, predictable cycles.",
+      "h1_tag": "Agile Scrum Fundamentals",
+      "meta_keywords": "agile scrum, scrum framework",
+      "primary_keyword": "agile scrum",
+      "search_intent": "informational",
+      "money_page": "https://www.example.com/product-b/",
+      "money_page_name": "Product B Scrum Master Course",
+      "category": "Quick Win",
+      "priority_score": 64,
+      "action": "OPTIMIZE"
+    }
+  ],
+  "money_pages": [
+    {"name": "Product A Certification Course", "url": "https://www.example.com/product-a/"},
+    {"name": "Product B Scrum Master Course", "url": "https://www.example.com/product-b/"}
+  ],
+  "blog_pages": [
+    "blog/agile-vs-waterfall",
+    "blog/training-roi-benchmarks",
+    {"slug": "blog/certification-cost-breakdown", "title": "Certification Cost Breakdown 2026"}
+  ]
+}

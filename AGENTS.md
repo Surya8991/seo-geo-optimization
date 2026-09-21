@@ -30,13 +30,17 @@ Open `config.json` and set:
 - `optimizer/MODERN-SEO-PLAYBOOK.md` - SEO + AEO + GEO + LLM tactics, applied in the build step.
 - `optimizer/template.html` - blank output skeleton (CSS + FAQ JS + JSON-LD).
 - `optimizer/config_loader.py` - shared config reader.
+- `optimizer/constants.py` - shared stop-word list + rule thresholds (link/meta bands).
+- `optimizer/scoring.py` - pure, unit-tested scoring/parsing helpers used by `build_scorecard.py`.
 - `optimizer/lookup.py` - Step 1: merge scorecard + audit into one brief with the lever to pull.
 - `optimizer/cannibal.py` - Rule 6: check if another page, blog, or past build already owns a subtopic (reads the content ledger too).
 - `optimizer/ledger.py` - the content ledger: record new sections so future pages do not repeat them (`add` / `list` / `search`).
 - `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages. Reports a Flesch readability score.
 - `build_scorecard.py` - builds `scorecard.json` + `audit.json` from GSC + inventory exports.
 - `data/content_ledger.json` - the running record of new sections produced (created on first `ledger.py add`).
-- `WORKFLOW.md` - the per-page operating procedure (optimize-existing track).
+- `data/*.example.json` - committed sample scorecard/audit so the tooling runs before you have GSC exports.
+- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py` (`pip install -r requirements.txt && pytest`).
+- `WORKFLOW.md` - the per-page operating procedure (optimize-existing track), including Step 9 post-publish verification.
 - `.claude/commands/optimize-page.md` - optimize an existing page (`/optimize-page <slug>`).
 - `.claude/commands/new-page.md` - create a new page from scratch (`/new-page <topic>`).
 - `final output/` - optimized pages saved as `{slug}-green.html`; new pages as `{slug}.html`.
@@ -74,7 +78,7 @@ Self-contained: inline CSS + inline JS. New pages (the `/new-page` track) ship c
 15. **Changes summary (optimize mode).** End the review copy with the `.changes-summary` table documenting exactly what was done. `qa_check.py` requires it in optimize mode; new pages omit it.
 
 ## 8-lever SEO framework (address all 8 on every page)
-1. **Title/Meta SERP validation** - competitor titles, year for freshness, meta hook, char counts (title <=60, meta 150-155).
+1. **Title/Meta SERP validation** - competitor titles, year for freshness, meta hook, char counts (title <=60, meta 140-160, target ~150-155).
 2. **Competitor content-gap analysis** - top 5-10 results across USA, India, Canada, UK, Australia + AI Overview; find sections/angles/data they have and you don't.
 3. **Content freshness audit** - replace pre-2024 stats with 2024-2026 equivalents; update names; add current-year references.
 4. **Money-page internal link** - link to the page's money page from `audit.json` with descriptive anchor text (Rule 4), no country/city links.

@@ -46,11 +46,26 @@ python optimizer/qa_check.py "final output/<slug>.html" --words <n> --new       
 python optimizer/ledger.py add <slug> --section "<H2 title>" --angle "<unique angle>"
 ```
 
-Build the data from raw GSC + inventory exports (only when the source files change):
+No GSC exports yet? Copy the committed sample data and the tooling runs immediately:
 
 ```bash
-pip install openpyxl
+cp data/scorecard.example.json data/scorecard.json
+cp data/audit.example.json data/audit.json
+python optimizer/lookup.py product-certification
+```
+
+Build the real data from raw GSC + inventory exports (only when the source files change):
+
+```bash
+pip install -r requirements.txt
 python build_scorecard.py    # regenerates data/scorecard.json + data/audit.json
+```
+
+Run the test suite (covers the QA gate, scoring, ledger, and cannibalization logic):
+
+```bash
+pip install -r requirements.txt
+pytest
 ```
 
 The input contract (which workbook, sheets, and columns `build_scorecard.py` expects) is
@@ -74,11 +89,16 @@ SEO & GEO Optimization/
 │   ├── MODERN-SEO-PLAYBOOK.md        SEO + AEO + GEO + LLM best practices
 │   ├── template.html                 Blank output skeleton (CSS + FAQ JS + JSON-LD + changes-summary)
 │   ├── config_loader.py              Shared config reader
+│   ├── constants.py                  Shared stop words + rule thresholds
+│   ├── scoring.py                    Pure scoring/parsing helpers (unit-tested)
 │   ├── lookup.py                     Step 1: merge scorecard + audit into one brief
 │   ├── cannibal.py                   Rule 6: find pages/blogs/past builds covering a subtopic
 │   ├── ledger.py                     Content ledger: record new sections, block future repeats
 │   └── qa_check.py                   QA gate (optimize + --new modes, readability score)
-├── data/                         Generated scorecard.json, audit.json, content_ledger.json (gitignored)
+├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal)
+├── requirements.txt              openpyxl (runtime) + pytest (dev)
+├── data/                         scorecard.json, audit.json, content_ledger.json (gitignored)
+│   └── *.example.json            Committed sample data so the tooling runs before real exports
 └── final output/                 Optimized pages ({slug}-green.html) and new pages ({slug}.html)
 ```
 

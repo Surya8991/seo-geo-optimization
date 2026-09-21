@@ -4,6 +4,8 @@ __pycache__/
 
 # Generated data (outputs, may contain site data)
 data/*.json
+# ...but keep the committed sample data so the pipeline runs out of the box
+!data/*.example.json
 
 # Optimized page outputs
 final output/*.html

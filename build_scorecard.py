@@ -30,6 +30,11 @@ from pathlib import Path
 import openpyxl
 
 from optimizer.config_loader import load_config
+from optimizer.scoring import (
+    safe_float, safe_int, ctr_to_number, ctr_column_is_fraction,
+    compute_trend, trend_label, position_band, expected_ctr,
+    impression_band, classify_intent,
+)
 
 CONFIG = load_config()
 BRAND = CONFIG["brand_name"]
@@ -59,35 +64,9 @@ SHEET_MONEY = "money_pages"
 SHEET_BLOG = "blog"
 SHEET_META = "meta_data"
 
-# ---------------------------------------------------------------------------
-# Small helpers
-# ---------------------------------------------------------------------------
-def normalise_ctr(val):
-    if val is None:
-        return 0.0
-    if isinstance(val, str):
-        val = val.strip().rstrip("%")
-        try:
-            return float(val)
-        except ValueError:
-            return 0.0
-    v = float(val)
-    return round(v * 100, 2) if v < 1.0 else round(v, 2)
-
-
-def safe_float(val, default=0.0):
-    try:
-        return float(val)
-    except (ValueError, TypeError):
-        return default
-
-
-def safe_int(val, default=0):
-    try:
-        return int(float(val))
-    except (ValueError, TypeError):
-        return default
-
+# Numeric/parsing helpers (safe_float, safe_int, ctr_to_number, ctr_column_is_fraction,
+# compute_trend, trend_label, position_band, expected_ctr, impression_band,
+# classify_intent) are imported from optimizer/scoring.py so they can be unit-tested.
 
 # ---------------------------------------------------------------------------
 # 1. Load page inventory
@@ -155,16 +134,25 @@ print("[5/7] Loading aggregate GSC data ...")
 gsc_by_url = {}
 if AGGREGATE_XLSX.exists():
     wb_a = openpyxl.load_workbook(str(AGGREGATE_XLSX), read_only=True, data_only=True)
+    raw_rows = []          # (url, clicks, impressions, ctr_number, is_explicit_pct, position)
+    bare_ctr_numbers = []  # bare (non-percent-string) ctr values, to decide the column scale
     for row in wb_a["Pages"].iter_rows(min_row=2, values_only=True):
         if row[0] is None:
             continue
-        gsc_by_url[str(row[0]).strip()] = {
-            "clicks": safe_int(row[1]),
-            "impressions": safe_int(row[2]),
-            "ctr": normalise_ctr(row[3]),
-            "position": round(safe_float(row[4]), 2),
-        }
+        ctr_num, explicit_pct = ctr_to_number(row[3])
+        if not explicit_pct:
+            bare_ctr_numbers.append(ctr_num)
+        raw_rows.append((str(row[0]).strip(), safe_int(row[1]), safe_int(row[2]),
+                         ctr_num, explicit_pct, round(safe_float(row[4]), 2)))
     wb_a.close()
+    scale_bare = ctr_column_is_fraction(bare_ctr_numbers)  # True => multiply fractions by 100
+    for url, clicks, imp, ctr_num, explicit_pct, pos in raw_rows:
+        ctr = ctr_num if explicit_pct else (ctr_num * 100 if scale_bare else ctr_num)
+        gsc_by_url[url] = {
+            "clicks": clicks, "impressions": imp,
+            "ctr": round(ctr, 2), "position": pos,
+        }
+    print(f"   CTR column read as {'fractions (x100)' if scale_bare else 'percent values'}")
 else:
     print(f"   WARNING: {AGGREGATE_XLSX} not found; scorecard metrics will be zero")
 print(f"   Loaded {len(gsc_by_url)} GSC page entries")
@@ -199,61 +187,6 @@ def find_gsc_url(slug_tail):
         if url.rstrip("/").endswith(f"/{INFO_PATH}/{slug_tail}"):
             return url
     return None
-
-
-def compute_trend(monthly_dict, labels):
-    vals = [monthly_dict.get(m, 0) for m in labels]
-    if len(vals) < 4:
-        return 0.0
-    half = len(vals) // 2
-    sp, sr = sum(vals[:half]), sum(vals[half:])
-    if sp == 0:
-        return 100.0 if sr > 0 else 0.0
-    return round(((sr - sp) / sp) * 100, 1)
-
-
-def trend_label(pct):
-    return "Rising" if pct > 15 else "Declining" if pct < -15 else "Stable"
-
-
-def position_band(pos):
-    if pos <= 0:
-        return "No Data"
-    if pos <= 3:
-        return "Top 3"
-    if pos <= 10:
-        return "Page 1 (4-10)"
-    if pos <= 20:
-        return "Page 2"
-    if pos <= 50:
-        return "Page 3+"
-    return "Deep"
-
-
-def expected_ctr(pos):
-    if pos <= 1:
-        return 30.0
-    if pos <= 2:
-        return 15.0
-    if pos <= 3:
-        return 10.0
-    if pos <= 10:
-        return 5.0
-    if pos <= 20:
-        return 1.5
-    return 0.5
-
-
-def impression_band(imp):
-    if imp >= 100000:
-        return "Very High"
-    if imp >= 10000:
-        return "High"
-    if imp >= 1000:
-        return "Medium"
-    if imp >= 100:
-        return "Low"
-    return "Very Low"
 
 
 entries = []
@@ -392,15 +325,6 @@ def match_money_page(slug, title):
         if score > best_score:
             best, best_score = mp, score
     return best if best_score >= 3 else None
-
-
-def classify_intent(slug, title):
-    t = (slug + " " + title).lower()
-    if any(s in t for s in ["vs", "versus", "comparison", "best", "top ", "tools", "software", "alternatives", "review"]):
-        return "commercial"
-    if any(s in t for s in ["login", "portal", "download", "register", "sign up"]):
-        return "navigational"
-    return "informational"
 
 
 sc_lookup = {e["slug"]: e for e in entries}

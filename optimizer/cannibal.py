@@ -24,12 +24,14 @@ try:
 except ImportError:
     ledger_search = None
 
+try:
+    from constants import STOP_WORDS as STOP
+except ImportError:
+    from optimizer.constants import STOP_WORDS as STOP
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCORECARD = os.path.join(BASE, "data", "scorecard.json")
 AUDIT = os.path.join(BASE, "data", "audit.json")
-
-STOP = {"the", "a", "an", "of", "for", "to", "in", "and", "or", "how", "what",
-        "why", "with", "your", "you", "is", "are", "on", "best", "top", "guide"}
 
 
 def tokens(s):

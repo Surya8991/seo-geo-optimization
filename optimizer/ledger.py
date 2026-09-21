@@ -26,11 +26,13 @@ import re
 import sys
 from datetime import date
 
+try:
+    from constants import STOP_WORDS as STOP
+except ImportError:
+    from optimizer.constants import STOP_WORDS as STOP
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LEDGER = os.path.join(BASE, "data", "content_ledger.json")
-
-STOP = {"the", "a", "an", "of", "for", "to", "in", "and", "or", "how", "what",
-        "why", "with", "your", "you", "is", "are", "on", "best", "top", "guide"}
 
 
 def _tokens(s):

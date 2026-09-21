@@ -1,0 +1,64 @@
+{
+  "_comment": "Sample scorecard so lookup.py / cannibal.py run without real GSC exports. Copy to scorecard.json (or point tooling here) to try the pipeline. Regenerate the real file with `python build_scorecard.py`.",
+  "pages": [
+    {
+      "url": "https://www.example.com/info/product-certification",
+      "title": "Product Certification: A Complete Guide",
+      "slug": "info/product-certification",
+      "clicks_16m": 1840,
+      "impressions": 420000,
+      "ctr": 0.44,
+      "position": 8.6,
+      "monthly": {"Mar 2026": 140, "Apr 2026": 120, "May 2026": 95, "Jun 2026": 70},
+      "trend_pct": -38.5,
+      "trend_label": "Declining",
+      "pos_band": "Page 1 (4-10)",
+      "ctr_gap": 4.56,
+      "imp_band": "Very High",
+      "category": "Top Performers Falling",
+      "priority_score": 82,
+      "action": "PROTECT"
+    },
+    {
+      "url": "https://www.example.com/info/agile-scrum-fundamentals",
+      "title": "Agile Scrum Fundamentals",
+      "slug": "info/agile-scrum-fundamentals",
+      "clicks_16m": 60,
+      "impressions": 22000,
+      "ctr": 0.27,
+      "position": 14.2,
+      "monthly": {"Mar 2026": 3, "Apr 2026": 4, "May 2026": 5, "Jun 2026": 6},
+      "trend_pct": 28.0,
+      "trend_label": "Rising",
+      "pos_band": "Page 2",
+      "ctr_gap": 1.23,
+      "imp_band": "High",
+      "category": "Quick Win",
+      "priority_score": 64,
+      "action": "OPTIMIZE"
+    },
+    {
+      "url": "https://www.example.com/info/training-roi-calculator",
+      "title": "How to Measure Training ROI",
+      "slug": "info/training-roi-calculator",
+      "clicks_16m": 4,
+      "impressions": 310,
+      "ctr": 1.29,
+      "position": 41.0,
+      "monthly": {"Mar 2026": 1, "Apr 2026": 0, "May 2026": 1, "Jun 2026": 0},
+      "trend_pct": 0.0,
+      "trend_label": "Stable",
+      "pos_band": "Page 3+",
+      "ctr_gap": 0.0,
+      "imp_band": "Low",
+      "category": "Dead Since Birth",
+      "priority_score": 21,
+      "action": "OPTIMIZE"
+    }
+  ],
+  "stats": {
+    "total": 3,
+    "in_gsc": 3,
+    "categories": {"Top Performers Falling": 1, "Quick Win": 1, "Dead Since Birth": 1}
+  }
+}

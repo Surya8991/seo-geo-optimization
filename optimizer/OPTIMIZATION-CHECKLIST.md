@@ -2,6 +2,15 @@
 
 Wherever this says "the brand" or `example.com`, the real values come from `config.json`.
 
+**Scope note (publish / CMS / site layer).** A few points cannot be satisfied inside the
+self-contained HTML fragment this pipeline outputs; they live at the CMS, template, or
+site-wide layer. Do not score them PASS from the fragment. Instead, note them in the review
+copy as "verify at publish": **#26 Image SEO** (real image files, WebP, compression),
+**#29 Internal links inbound** (links FROM other pages, a site-wide task), **#37 Core Web
+Vitals**, **#38 Mobile** (beyond `.table-scroll`), **#39 Indexing/canonical/sitemap**, and
+**#40 Page Speed**. The fragment can only prepare for these (alt text, `.table-scroll`,
+descriptive filenames in `src`); the measurement happens on the live page.
+
 ## A. SEARCH VISIBILITY (4 points)
 1. **AI Overview Optimization (AIO)** - Clear 40-60 word definitions at top of sections, "What is X" format, structured data
 2. **Answer Engine Optimization (AEO)** - Conversational Q&A format, FAQ sections, answer PAA questions in body
@@ -34,7 +43,7 @@ Wherever this says "the brand" or `example.com`, the real values come from `conf
 
 ## E. ON-PAGE SEO (6 points)
 23. **Title Tag** - Primary keyword + value + under 60 chars. Numbers, year, brackets
-24. **Meta Description** - 150-155 chars, keyword, reason to click, benefit statement
+24. **Meta Description** - 140-160 chars (target ~150-155), keyword, reason to click, benefit statement
 25. **Heading Structure** - H1 with keyword, H2s for subtopics/questions, H3s supporting. Logical
 26. **Image SEO** - Descriptive filenames, alt text with keywords, compressed/WebP, custom images
 27. **URL Structure** - Short, keyword-rich, no unnecessary words, lowercase, hyphens

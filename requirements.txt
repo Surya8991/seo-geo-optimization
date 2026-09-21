@@ -1,0 +1,5 @@
+# Runtime dependency for build_scorecard.py (reading GSC + inventory .xlsx exports).
+openpyxl>=3.1,<4
+
+# Dev / test only:
+pytest>=8,<9

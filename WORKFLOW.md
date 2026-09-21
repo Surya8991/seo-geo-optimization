@@ -125,3 +125,22 @@ Save to `final output/{slug}-green.html`. Report: what changed, before/after met
 scorecard + readability, the AI Overview angle, the slug and scope verdicts, the 50-point
 delta, the 3 meta options, and the ledger entries added.
 **Wait for confirmation before the next page.**
+
+## STEP 9 - Post-publish verification (about 30 days after publishing)
+Optimization is not done when the page ships; GEO is probabilistic and the citable set rotates
+month to month (see the playbook). Close the loop so you learn which changes actually earned
+visibility, rather than optimizing blind.
+
+Roughly 30 days after the page goes live, for the primary keyword and 3-5 real buyer prompts:
+- Re-check the **live Google AI Overview**: is the page (or brand) now cited? In what format?
+- Run the same prompts across **ChatGPT, Perplexity, Gemini, and Claude** and record citation
+  presence (present / absent), since engines barely overlap and output is probabilistic (run
+  each prompt a few times, not once).
+- Pull fresh **GSC** numbers for the URL: clicks, impressions, CTR, average position, and
+  compare against the before snapshot from Step 1.
+
+Log the result (a row per page: date, keyword, per-engine cited y/n, CTR/position delta) and
+feed it back: pages that moved confirm the lever; pages that did not get re-queued with a new
+angle. When exports refresh, rerun `python build_scorecard.py` so the scorecard/decay signal
+(`trend_label`, category) reflects the new reality. This step is manual today; the log is the
+input to deciding the next page to optimize.
