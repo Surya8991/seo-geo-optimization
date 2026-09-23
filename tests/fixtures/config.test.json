@@ -1,0 +1,12 @@
+{
+  "_note": "Fixed config used by the test suite (via SEO_GEO_CONFIG in conftest.py) so tests stay deterministic no matter what brand the real project-root config.json holds. Mirrors config_loader._DEFAULTS.",
+  "brand_name": "Your Brand",
+  "domain": "example.com",
+  "base_url": "https://www.example.com/",
+  "info_path": "info",
+  "blog_path": "blog",
+  "money_page_pattern": "https://www.example.com/{course-slug}/",
+  "max_brand_mentions": 1,
+  "course_keyword_map": {},
+  "country_slugs": []
+}

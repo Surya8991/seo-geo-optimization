@@ -93,6 +93,7 @@ Then generate 3 meta options from the actual content.
 ## Step 8 - QA gate, ledger, save
 ```bash
 python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count> --keyword "<primary keyword>"
+python optimizer/linkcheck.py "final output/<slug>-green.html"   # every internal link resolves to a live, canonical URL (no 404s, no redirects)
 python optimizer/meta_audit.py   # confirm this page's meta title/description are unique site-wide
 ```
 Every hard check must pass (including the changes-summary table, heading hierarchy, image alt

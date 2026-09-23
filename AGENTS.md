@@ -35,12 +35,13 @@ Open `config.json` and set:
 - `optimizer/lookup.py` - Step 1: merge scorecard + audit into one brief with the lever to pull.
 - `optimizer/cannibal.py` - Rule 6: check if another page, blog, or past build already owns a subtopic (reads the content ledger too).
 - `optimizer/ledger.py` - the content ledger: record new sections so future pages do not repeat them (`add` / `list` / `search`).
-- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages; `--keyword` checks primary-keyword placement (Rule 2). Also validates heading hierarchy (one H1, no skipped levels), image alt text/filenames, JSON-LD parsing + Article-schema completeness, a current-year freshness date, and pre-2024 stats (Rule 12). Reports a Flesch readability score.
+- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages; `--keyword` checks primary-keyword placement (Rule 2). Also validates heading hierarchy (one H1, no skipped levels), image alt text/filenames, JSON-LD parsing + Article-schema completeness, a current-year freshness date, and pre-2024 stats (Rule 12). Reports a Flesch readability score. It computes its own reader word count for the link-budget band (notes fully stripped, even when they wrap tables), so `--words` is advisory only and a too-high value can no longer unlock a larger link budget.
 - `optimizer/meta_audit.py` - find duplicate meta titles/descriptions across the site (reads audit.json).
 - `optimizer/next.py` - rank pending pages by priority (skips ones already built) to pick the next page to optimize.
 - `optimizer/striking.py` - list striking-distance pages (avg position 8-20 with impressions), the highest-ROI targets.
 - `optimizer/llms_txt.py` - generate an `/llms.txt` from the inventory (agent/MCP convenience; not a citation lever).
 - `optimizer/interlink.py` - inbound-link finder (Checklist #29): existing pages that should link TO the page being optimized.
+- `optimizer/linkcheck.py` - resolve every internal link in the built page and flag any that 404 (broken) or 301/302 (redirecting to a non-canonical URL). Run it before saving so no stale-slug or dead internal link ships.
 - `optimizer/check_bots.py` - fetch the live `robots.txt` and report whether the AI retrieval/search bots are allowed (a make-or-break GEO lever).
 - `optimizer/verify.py` - the post-publish verification log (WORKFLOW Step 9): record per-engine citation presence + GSC deltas; `verify.py report` rolls them up.
 - `build_scorecard.py` - builds `scorecard.json` + `audit.json` from GSC + inventory exports.
@@ -49,7 +50,7 @@ Open `config.json` and set:
 - `data/verification_log.json` - post-publish verification results (created on first `verify.py add`).
 - `data/*.example.json` - committed sample scorecard/audit so the tooling runs before you have GSC exports.
 - `.github/workflows/ci.yml` - CI: runs the pytest suite and byte-compiles all Python on every push/PR.
-- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py`, `next.py`, `interlink.py`, `check_bots.py`, `verify.py`, `meta_audit.py`, `striking.py`, `llms_txt.py` (`pip install -r requirements.txt && pytest`).
+- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py`, `next.py`, `interlink.py`, `check_bots.py`, `verify.py`, `meta_audit.py`, `striking.py`, `llms_txt.py`, `linkcheck.py` (`pip install -r requirements.txt && pytest`). Tests pin a fixed config via `SEO_GEO_CONFIG` (see `tests/fixtures/config.test.json`), so they stay green no matter which brand `config.json` holds.
 - `WORKFLOW.md` - the per-page operating procedure (optimize-existing track), including Step 9 post-publish verification.
 - `.claude/commands/optimize-page.md` - optimize an existing page (`/optimize-page <slug>`).
 - `.claude/commands/new-page.md` - create a new page from scratch (`/new-page <topic>`).

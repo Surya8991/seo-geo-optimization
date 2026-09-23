@@ -25,10 +25,20 @@ def project_root():
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def config_path():
+    """Path to the config file. The SEO_GEO_CONFIG env var overrides the default
+    (project-root config.json) so tests can pin a fixed config independent of whatever
+    brand config.json currently holds."""
+    override = os.environ.get("SEO_GEO_CONFIG")
+    if override:
+        return override
+    return os.path.join(project_root(), "config.json")
+
+
 def load_config():
-    """Return the merged config (config.json over defaults). Missing file = defaults."""
+    """Return the merged config (config file over defaults). Missing file = defaults."""
     cfg = dict(_DEFAULTS)
-    path = os.path.join(project_root(), "config.json")
+    path = config_path()
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
             user = json.load(f)

@@ -1,10 +1,10 @@
 {
-  "brand_name": "Your Brand",
-  "domain": "example.com",
-  "base_url": "https://www.example.com/",
-  "info_path": "info",
+  "brand_name": "Edstellar",
+  "domain": "edstellar.com",
+  "base_url": "https://www.edstellar.com/",
+  "info_path": "category",
   "blog_path": "blog",
-  "money_page_pattern": "https://www.example.com/{course-slug}/",
+  "money_page_pattern": "https://www.edstellar.com/course/{course-slug}",
   "max_brand_mentions": 1,
 
   "_note": "This is the ONLY place brand specifics live. Set brand_name, domain, base_url and the URL paths for your site, then every script and doc uses them. course_keyword_map drives money-page matching in build_scorecard.py; leave it empty to rely on title-word overlap only.",

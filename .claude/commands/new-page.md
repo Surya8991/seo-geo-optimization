@@ -85,6 +85,7 @@ Then produce 3 meta-title/description options from the actual content.
 ## Step 6 - QA gate, ledger, save
 ```bash
 python optimizer/qa_check.py "final output/<slug>.html" --words <reader_word_count> --new --keyword "<primary keyword>"
+python optimizer/linkcheck.py "final output/<slug>.html"   # every internal link resolves to a live, canonical URL (no 404s, no redirects)
 python optimizer/meta_audit.py   # confirm the new meta title/description are unique site-wide
 ```
 All hard checks must pass (heading hierarchy, image alt text, keyword placement, valid JSON-LD);
