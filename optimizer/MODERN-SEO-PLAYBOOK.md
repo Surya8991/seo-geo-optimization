@@ -127,6 +127,42 @@ Citation overlap between engines is small, so ranking on one does not transfer t
 Track presence over a set of real buyer prompts, not a single query, since AI output is
 probabilistic.
 
+## 8. Strategy, format, off-page, and measurement (AEO course concepts)
+The lessons below come from the Ahrefs AEO course. Some are per-page (apply in the build),
+some are strategy or off-page (flag for the wider plan, do not block the page edit).
+
+- **BID keyword vetting (per page, Step 3).** Vet the target term on three axes before
+  committing: **B**usiness potential (does ranking drive signups/revenue?), **I**ntent (does
+  the live SERP format match the page type?), **D**ifficulty (can this domain realistically
+  outrank the incumbents?). A weak B or an impossible D is a reason to pivot or de-prioritize.
+- **The AI-click trap + tool-keyword exception.** Informational question queries trigger an AI
+  Overview that answers without a click a large share of the time, so pure-informational pages
+  lose CTR even at rank 1. **Interactive tool intent (calculators, checkers, generators,
+  templates, matrices)** is immune, because the user needs the utility. Favor a tool/interactive
+  angle or a bottom-of-funnel comparison where the keyword allows (see Checklist #32).
+- **Format dominance.** Listicles, product comparisons, and reviews make up roughly **44% of
+  cited pages** across ChatGPT and Google AI Overviews. When intent allows, structure the page
+  as a numbered list, a comparison, or a review rather than an essay, and put the comparison in
+  a `.table-scroll` table.
+- **Brand-labeled frameworks (reconciled with Rule 5).** Naming an original framework, metric,
+  or method after the brand makes it a citable, ownable entity. This is the best way to "spend"
+  the single allowed body brand mention (Rule 5): a brand-labeled proprietary framework counts
+  as that one mention, and is preferable to a generic brand drop in the conclusion. Do not add a
+  second brand mention for it.
+- **3 tiers of brand mentions (off-page, flag).** Citations follow earned mentions: Tier 1
+  third-party editorial (high-authority listicles, comparisons, reviews), Tier 2 community
+  (Reddit, Quora), Tier 3 owned secondary media (YouTube, podcasts, LinkedIn). A page edit
+  cannot create these; note where the topic needs third-party corroboration for the strategy.
+- **YouTube as a citation lever (off-page, flag).** Video mentions correlate strongly with
+  ChatGPT visibility and appear in AI Overviews / AI Mode. Where a topic warrants it, flag a
+  companion video (spoken target keywords, keyworded title + first two description lines +
+  chapters) for the content team.
+- **Extra technical AEO checks (beyond section 6).** Confirm the live page is server-side
+  rendered so retrieval bots that do not run JavaScript still see the content; keep Core Web
+  Vitals fast enough that real-time RAG retrieval does not time out. `linkcheck.py` verifies the
+  page's own internal links resolve; separately, audit **inbound** AI-referrer 404s (assistants
+  hallucinate URLs far more often than Google) and 301-redirect them to live pages.
+
 ---
 
 ## Bake-in checklist (run during the build step)
