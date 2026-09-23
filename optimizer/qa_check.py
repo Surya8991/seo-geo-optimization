@@ -104,10 +104,36 @@ def strip_tags(html):
     html = re.sub(r"<style[\s\S]*?</style>", " ", html, flags=re.I)
     return re.sub(r"<[^>]+>", " ", html)
 
+def strip_note_blocks(html):
+    """Remove every <div class="note" ...>...</div> block, honoring nested <div>s.
+
+    A plain non-greedy regex stops at the FIRST </div>, so a note that wraps a
+    table (the changes-summary and publishing boxes both do) is only half removed,
+    which inflates the reader word count and can leak note links into the budget.
+    This walks div open/close depth to remove the whole block.
+    """
+    tag = re.compile(r'<(/?)div\b', re.I)
+    start = re.compile(r'<div class="note"', re.I)
+    out, i = [], 0
+    while True:
+        m = start.search(html, i)
+        if not m:
+            out.append(html[i:])
+            return "".join(out)
+        out.append(html[i:m.start()])
+        depth, end = 0, len(html)
+        for tm in tag.finditer(html, m.start()):
+            depth += 1 if tm.group(1) == "" else -1
+            if depth == 0:
+                gt = html.find(">", tm.end() - 1)
+                end = gt + 1 if gt != -1 else tm.end()
+                break
+        i = end
+
+
 def reader_text(html):
     """Visible text with review/publishing notes removed (they are not reader-facing)."""
-    body = re.sub(r'<div class="note"[\s\S]*?</div>', " ", html)
-    return strip_tags(body)
+    return strip_tags(strip_note_blocks(html))
 
 def link_band(words):
     for max_w, i_max, e_max in LINK_BUDGET:
@@ -277,7 +303,17 @@ def run(path, forced_words=None, is_new=False, keyword=None):
         results.append((bool(ok), label, detail))
 
     text = reader_text(html)
-    words = forced_words if forced_words else len(text.split())
+    # The link budget is governed by the word count the tool computes itself, so a
+    # too-high --words can no longer unlock a larger link budget than the copy earns.
+    # --words stays advisory: it is reported, and a large divergence is flagged.
+    computed_words = len(text.split())
+    words = computed_words
+    if forced_words:
+        diff = abs(forced_words - computed_words)
+        if diff > max(150, 0.15 * computed_words):
+            info.append(("Word count divergence",
+                         f"--words={forced_words} vs computed {computed_words}; "
+                         f"link band uses computed. Recheck the passed count."))
 
     # 1-3. Dashes
     em = html.count("—")
@@ -293,7 +329,7 @@ def run(path, forced_words=None, is_new=False, keyword=None):
     check(inv <= MAX_BRAND, f"Brand in body <= {MAX_BRAND}", f"found {inv} (notes excluded)")
 
     # 5. Links + budget
-    reader_html = re.sub(r'<div class="note"[\s\S]*?</div>', " ", html)
+    reader_html = strip_note_blocks(html)
     reader_hrefs = re.findall(r'<a\s[^>]*href="([^"]+)"[^>]*>', reader_html, re.I)
     internal = [h for h in reader_hrefs if DOMAIN in h.lower() or h.startswith("/")]
     external = [h for h in reader_hrefs if h.startswith("http") and DOMAIN not in h.lower()]

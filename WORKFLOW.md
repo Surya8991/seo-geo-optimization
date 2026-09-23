@@ -118,6 +118,7 @@ primary keyword so placement is checked:
 
 ```bash
 python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count> --keyword "<primary keyword>"
+python optimizer/linkcheck.py "final output/<slug>-green.html"   # every internal link resolves to a live, canonical URL (no 404s, no redirects)
 python optimizer/meta_audit.py   # confirm this page's meta title/description are unique site-wide
 ```
 
@@ -163,3 +164,16 @@ Feed it back: pages that moved confirm the lever; pages that did not get re-queu
 angle. When exports refresh, rerun `python build_scorecard.py` so the scorecard/decay signal
 (`trend_label`, category) reflects the new reality, then `python optimizer/next.py` to pick the
 next page by priority.
+
+**Site-level measurement to set up once (from the AEO course), not per page:**
+- **GA4 AI-traffic channel.** Create a custom channel group "AI Traffic" matching the AI
+  referrers so assistant-driven visits are attributable:
+  `chatgpt\.com|perplexity\.ai|gemini\.google\.com|copilot\.microsoft\.com|claude\.ai|deepseek\.com`.
+- **Bot-hit analytics.** Monitor crawl frequency from `GPTBot` / `OAI-SearchBot` in server or
+  CDN logs (complements `check_bots.py`, which only confirms access is allowed).
+- **Zero-party attribution.** Add a "How did you hear about us?" field at signup/checkout to
+  capture the 72% of brand mentions that are unlinked (no referrer to measure).
+- **Inbound 404 audit.** AI assistants hallucinate URLs, so periodically pull 404s with AI
+  referrers and 301-redirect them to the closest live page.
+- **Cadence.** Monthly: re-check share of voice / citations for priority pages. Quarterly:
+  competitive audit and a sleeper-page refresh pass (the scorecard's decay categories drive this).
