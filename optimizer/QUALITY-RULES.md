@@ -9,7 +9,14 @@ Run the gate before saving any output (pass `--keyword` to also check primary-ke
 
 ```bash
 python optimizer/qa_check.py "final output/{slug}-green.html" --words <reader_word_count> --keyword "<primary keyword>"
+python optimizer/linkcheck.py "final output/{slug}-green.html"   # internal links resolve to live, canonical URLs
 ```
+
+`--words` is advisory: `qa_check.py` computes its own reader word count (review/publishing/
+changes notes stripped, even when they wrap tables) and uses that for the link-budget band, so
+a too-high `--words` cannot unlock more links than the copy earns. `linkcheck.py` is a separate
+gate that fetches every internal link and fails on a 404 (broken) or a 301/302 (a stale slug
+pointing at a non-canonical URL); fix each to its final URL before saving.
 
 Beyond the 12 rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
 skipped levels); that every `<img>` has descriptive alt text and a non-generic filename; that
