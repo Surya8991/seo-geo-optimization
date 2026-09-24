@@ -85,6 +85,59 @@ class TestIntent:
         assert scoring.classify_intent("what-is-agile", "What is Agile") == "informational"
 
 
+class TestMoneyPagePattern:
+    def test_matches_valid_slug(self):
+        rx = scoring.money_page_pattern_regex("https://www.example.com/course/{course-slug}")
+        assert rx.match("https://www.example.com/course/agile-scrum")
+        assert rx.match("https://www.example.com/course/agile-scrum-101")
+
+    def test_rejects_mismatched_url(self):
+        rx = scoring.money_page_pattern_regex("https://www.example.com/course/{course-slug}")
+        assert not rx.match("https://www.example.com/blog/agile-scrum")
+        assert not rx.match("https://www.example.com/course/agile-scrum/extra")
+
+    def test_no_placeholder_returns_none(self):
+        assert scoring.money_page_pattern_regex("https://www.example.com/courses") is None
+
+    def test_trailing_slash_is_optional_either_side(self):
+        # Pattern has no trailing slash but a real export URL does (and vice versa) ->
+        # neither should be treated as a mismatch.
+        rx = scoring.money_page_pattern_regex("https://www.example.com/course/{course-slug}")
+        assert rx.match("https://www.example.com/course/agile-scrum/")
+
+        rx2 = scoring.money_page_pattern_regex("https://www.example.com/course/{course-slug}/")
+        assert rx2.match("https://www.example.com/course/agile-scrum")
+
+
+class TestHeaderIndex:
+    def test_finds_by_exact_alias(self):
+        idx, warning = scoring.header_index(["slug", "meta_title", "meta_description"],
+                                             ["meta_title", "title"], 1)
+        assert idx == 1 and warning is None
+
+    def test_finds_by_second_alias(self):
+        idx, warning = scoring.header_index(["slug", "title"], ["meta_title", "title"], 1)
+        assert idx == 1 and warning is None
+
+    def test_case_insensitive(self):
+        idx, warning = scoring.header_index(["Slug", "Meta_Title"], ["meta_title"], 1)
+        assert idx == 1 and warning is None
+
+    def test_missing_header_falls_back_with_warning(self):
+        idx, warning = scoring.header_index(["slug", "something_else"], ["meta_title", "title"], 1)
+        assert idx == 1
+        assert warning is not None and "not found" in warning
+
+    def test_empty_header_row_falls_back_with_warning(self):
+        idx, warning = scoring.header_index([], ["h1_tag", "h1"], 16)
+        assert idx == 16
+        assert warning is not None
+
+    def test_none_cells_in_header_row_are_tolerated(self):
+        idx, warning = scoring.header_index([None, "meta_title", None], ["meta_title"], 1)
+        assert idx == 1 and warning is None
+
+
 class TestSafeParsers:
     def test_safe_int(self):
         assert scoring.safe_int("42") == 42

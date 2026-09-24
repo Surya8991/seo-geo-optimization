@@ -24,6 +24,11 @@ import os
 import sys
 from datetime import date
 
+try:
+    from jsonstore import locked
+except ImportError:
+    from optimizer.jsonstore import locked
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(BASE, "data", "verification_log.json")
 
@@ -53,12 +58,13 @@ def load():
 
 def save(data):
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
-    with open(LOG, "w", encoding="utf-8") as f:
+    tmp = f"{LOG}.tmp.{os.getpid()}"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, LOG)
 
 
 def add(slug, keyword, cited, ctr_delta, pos_delta, ai_overview, note):
-    data = load()
     entry = {
         "date": date.today().isoformat(),
         "page_slug": slug,
@@ -69,8 +75,10 @@ def add(slug, keyword, cited, ctr_delta, pos_delta, ai_overview, note):
         "pos_delta": pos_delta,
         "note": note or "",
     }
-    data["entries"].append(entry)
-    save(data)
+    with locked(LOG):
+        data = load()
+        data["entries"].append(entry)
+        save(data)
     cited_str = ", ".join(f"{k}={'yes' if v else 'no'}" for k, v in cited.items()) or "-"
     print(f"Verification recorded for {slug} ('{keyword}'): {cited_str}")
     return 0

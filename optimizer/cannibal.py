@@ -25,9 +25,9 @@ except ImportError:
     ledger_search = None
 
 try:
-    from constants import STOP_WORDS as STOP
+    from constants import STOP_WORDS as STOP, small_inventory_warning
 except ImportError:
-    from optimizer.constants import STOP_WORDS as STOP
+    from optimizer.constants import STOP_WORDS as STOP, small_inventory_warning
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCORECARD = os.path.join(BASE, "data", "scorecard.json")
@@ -42,10 +42,12 @@ def main(phrase, exclude):
     scored = []
     q_words = set(tokens(phrase))
     phrase_l = phrase.lower().strip()
+    pages_count = 0
 
     # --- Pages (full scorecard data) ---
     if os.path.exists(SCORECARD):
         pages = json.load(open(SCORECARD, encoding="utf-8")).get("pages", [])
+        pages_count = len(pages)
         for p in pages:
             hay = (p.get("title", "") + " " + p.get("url", "") + " " + p.get("slug", "")).lower()
             if exclude and exclude.lower() in hay:
@@ -88,12 +90,17 @@ def main(phrase, exclude):
             scored.append((score, 0, "LEDGER", e))
 
     scored.sort(key=lambda x: (-x[0], -x[1]))
+    inv_warning = small_inventory_warning(pages_count, "scorecard.json")
 
     if not scored:
         print(f'No existing page, blog, or ledger entry matches "{phrase}". Safe to write a new section.')
+        if inv_warning:
+            print(f"{inv_warning} A clean result here may just mean there is nothing to compare against yet.")
         return 0
 
     print(f'\nExisting pages overlapping "{phrase}" (strongest first):\n')
+    if inv_warning:
+        print(f"{inv_warning}\n")
     for score, ov, page_type, p in scored[:15]:
         flag = "  <-- STRONG OVERLAP, link instead of writing" if score >= 100 else ""
         if page_type == "PAGE":

@@ -74,7 +74,11 @@ lifts citation share:
 ## 4. LLM / AI-search visibility (the technical + entity layer)
 - **Entity clarity.** Name entities explicitly and consistently (full product, company,
   framework, and role names, not pronouns or abbreviations on first use). Link core entities
-  to their canonical pages so the model can disambiguate.
+  to their canonical pages so the model can disambiguate. This is a per-page practice; the
+  site-wide version is the brand's own entity clarity - a Wikidata/Wikipedia entry and
+  consistent `sameAs` links from the `Organization` schema across pages help a model resolve
+  "who is this brand" independently of any one page's content (site-level project, not a
+  per-page edit; flag it for the wider content/brand strategy, same as off-site authority below).
 - **Author + E-E-A-T signals.** Authored content with verifiable credentials is cited more
   than anonymous content; 2026 analyses find `Person`/author schema appears far more often on
   AI-cited pages than across the web at large. Ensure a real author/reviewer with credentials
@@ -89,11 +93,30 @@ lifts citation share:
   "last updated" date and 2024-2026 stats keep a page in the citable set.
 - **Off-site authority (flag, mostly beyond one page edit).** 2026 earned-media analyses
   report that the large majority (~85% in some studies) of AI citations come from third-party
-  / earned media, not the brand's own site. A single page cannot fix this, but note where the
-  topic needs external corroboration and raise it for the wider content strategy.
+  / earned media, not the brand's own site. This is the single strongest GEO lever this
+  pipeline has NO tooling for - everything here is on-page/content-only. A single page cannot
+  fix this, but note where the topic needs external corroboration and raise it for the wider
+  content strategy. Closing the gap needs something outside this repo: a mentions-monitoring
+  service (Google Alerts, a brand-mentions API, or a PR/comms team's existing tool) tracking
+  where the brand is already being cited, so that signal can feed back into which topics/pages
+  to prioritize - not a script this codebase can run for you.
 - **llms.txt (site-level, not per-page).** An emerging `/llms.txt` convention exists; Google
   has said it does not use it and schema type does not predict citation volume. Do not block
   a page on it. Note it once for the site owner and move on.
+- **pricing.md (site-level, not per-page).** AI agents increasingly evaluate and recommend
+  services on a buyer's behalf; an agent skips a vendor whose pricing sits behind a
+  JS-rendered page or a "contact sales" wall it can't parse. `optimizer/pricing.py` generates
+  a `/pricing.md` skeleton (name + URL) from the money pages in `audit.json` - fill in real,
+  current price/limits/features by hand and publish it at the site root. Same caveat as
+  llms.txt: no confirmed Google ranking effect, but cheap and it helps the agent-driven
+  buying-journey case specifically.
+- **OKF ("Open Knowledge Format", site-level, not per-page) - deliberately NOT built.** Google
+  introduced OKF in 2026 as a markdown-bundle spec for agent-readable site content, but it has
+  no confirmed AI-search ranking signal today and is aimed primarily at data-catalog metadata,
+  not blog content - treat it like early schema.org registration, not a citation lever. This
+  project's inventory is also still thin (see the small-inventory warnings elsewhere), so a
+  cross-linked multi-page bundle isn't a good fit yet. Revisit once OKF has a confirmed signal
+  or a clearer content-marketing use case, rather than building it speculatively now.
 
 ## 5. Schema markup set (per page)
 Include as JSON-LD (Google-preferred) alongside the visible content:

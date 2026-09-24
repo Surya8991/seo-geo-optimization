@@ -67,3 +67,42 @@ def test_run_passes_when_all_canonical(tmp_path):
         "https://www.example.com/blog/dead": (200, "https://www.example.com/blog/dead"),
     }
     assert linkcheck.run(str(p), fetcher=_fake_fetcher(mapping)) == 0
+
+
+BREADCRUMB_HTML = """<!DOCTYPE html><html><body><div class="wrap">
+<p>No body links here at all, just text.</p>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[
+  {"@type":"ListItem","position":1,"name":"Blog","item":"https://www.example.com/blog"},
+  {"@type":"ListItem","position":2,"name":"Page","item":"https://www.example.com/blog/rotted"}
+]}
+</script>
+</div></body></html>"""
+
+
+class TestBreadcrumbLinks:
+    def test_extracts_internal_breadcrumb_urls(self):
+        links = linkcheck.extract_breadcrumb_links(BREADCRUMB_HTML)
+        assert links == ["https://www.example.com/blog", "https://www.example.com/blog/rotted"]
+
+    def test_non_breadcrumb_jsonld_is_ignored(self):
+        html = '<script type="application/ld+json">{"@type":"Article","headline":"x"}</script>'
+        assert linkcheck.extract_breadcrumb_links(html) == []
+
+    def test_run_flags_a_broken_breadcrumb_link(self, tmp_path):
+        p = tmp_path / "page.html"
+        p.write_text(BREADCRUMB_HTML, encoding="utf-8")
+        mapping = {
+            "https://www.example.com/blog": (200, "https://www.example.com/blog"),
+            "https://www.example.com/blog/rotted": (404, "https://www.example.com/blog/rotted"),
+        }
+        assert linkcheck.run(str(p), fetcher=_fake_fetcher(mapping)) == 1
+
+    def test_run_passes_when_breadcrumb_links_are_canonical(self, tmp_path):
+        p = tmp_path / "page.html"
+        p.write_text(BREADCRUMB_HTML, encoding="utf-8")
+        mapping = {
+            "https://www.example.com/blog": (200, "https://www.example.com/blog"),
+            "https://www.example.com/blog/rotted": (200, "https://www.example.com/blog/rotted"),
+        }
+        assert linkcheck.run(str(p), fetcher=_fake_fetcher(mapping)) == 0

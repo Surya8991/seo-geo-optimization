@@ -6,6 +6,7 @@ These live here (rather than inline in build_scorecard.py) so they can be import
 and unit-tested without triggering the full export-reading pipeline that runs at
 build_scorecard import time.
 """
+import re
 
 
 def safe_float(val, default=0.0):
@@ -113,6 +114,37 @@ def impression_band(imp):
     if imp >= 100:
         return "Low"
     return "Very Low"
+
+
+def money_page_pattern_regex(pattern):
+    """Turn config.json's {course-slug} money_page_pattern into a matching regex, so
+    the money_pages sheet can be validated against the URL shape the operator declared.
+    Returns None if the pattern has no placeholder to anchor on.
+
+    A trailing slash is optional on both sides: real exports commonly have one even
+    when the configured pattern doesn't (or vice versa), and that alone should not
+    make every money page look mismatched.
+    """
+    if "{course-slug}" not in pattern:
+        return None
+    escaped = re.escape(pattern.rstrip("/")).replace(re.escape("{course-slug}"), r"[a-z0-9-]+")
+    return re.compile(f"^{escaped}/?$", re.I)
+
+
+def header_index(header_row, names, fallback_idx):
+    """Find a column index by header name (case-insensitive) among `names` aliases.
+
+    Returns (index, None) if one of the aliases is present in `header_row`, or
+    (fallback_idx, warning_message) if none are - so a reordered export column
+    produces a loud warning instead of silently reading the wrong data.
+    """
+    lower = [str(h).strip().lower() if h else "" for h in header_row]
+    for name in names:
+        if name in lower:
+            return lower.index(name), None
+    warning = (f"header {names!r} not found; falling back to column "
+               f"{fallback_idx + 1} by position")
+    return fallback_idx, warning
 
 
 def classify_intent(slug, title):
