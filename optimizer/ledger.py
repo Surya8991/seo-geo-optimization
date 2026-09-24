@@ -28,8 +28,10 @@ from datetime import date
 
 try:
     from constants import STOP_WORDS as STOP
+    from jsonstore import locked
 except ImportError:
     from optimizer.constants import STOP_WORDS as STOP
+    from optimizer.jsonstore import locked
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LEDGER = os.path.join(BASE, "data", "content_ledger.json")
@@ -48,20 +50,23 @@ def load():
 
 def save(data):
     os.makedirs(os.path.dirname(LEDGER), exist_ok=True)
-    with open(LEDGER, "w", encoding="utf-8") as f:
+    tmp = f"{LEDGER}.tmp.{os.getpid()}"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, LEDGER)
 
 
 def add(slug, section, angle, asset):
-    data = load()
-    data["entries"].append({
-        "page_slug": slug,
-        "section": section,
-        "angle": angle or "",
-        "unique_asset": asset or "",
-        "date": date.today().isoformat(),
-    })
-    save(data)
+    with locked(LEDGER):
+        data = load()
+        data["entries"].append({
+            "page_slug": slug,
+            "section": section,
+            "angle": angle or "",
+            "unique_asset": asset or "",
+            "date": date.today().isoformat(),
+        })
+        save(data)
     print(f"Ledger updated: '{section}' recorded for {slug}.")
     return 0
 

@@ -11,6 +11,11 @@ import json
 import os
 import sys
 
+try:
+    from constants import small_inventory_warning
+except ImportError:
+    from optimizer.constants import small_inventory_warning
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUDIT = os.path.join(BASE, "data", "audit.json")
 
@@ -50,6 +55,9 @@ def main():
         return 1
     rows = json.load(open(AUDIT, encoding="utf-8")).get("audit_rows", [])
     print(f"\nMeta uniqueness audit across {len(rows)} pages\n")
+    warning = small_inventory_warning(len(rows), "audit.json")
+    if warning:
+        print(warning + "\n")
     print("Meta titles:")
     rc_t = _report(rows, "meta_title", "meta titles")
     print("\nMeta descriptions:")

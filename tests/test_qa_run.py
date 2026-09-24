@@ -61,10 +61,26 @@ def _passing_optimize_html():
 <div class="faq-question"><p itemprop="name">How long does certification take?</p><span class="toggle-icon"></span></div>
 <div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Most candidates finish within a few months.</p></div>
 </div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">What does certification cost?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Costs vary by provider and format.</p></div>
+</div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">Is certification required for the role?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">It is often preferred but not always mandatory.</p></div>
+</div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">How is certification renewed?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Most certifications renew every two to three years.</p></div>
+</div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">Which industries value certification most?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Technology, finance, and healthcare value it highly.</p></div>
+</div>
 </section>
 </div>
 <script type="application/ld+json">
-{{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{{"@type":"Question","name":"How long does certification take?","acceptedAnswer":{{"@type":"Answer","text":"Most candidates finish within a few months."}}}}]}}
+{{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{{"@type":"Question","name":"How long does certification take?","acceptedAnswer":{{"@type":"Answer","text":"Most candidates finish within a few months."}}}},{{"@type":"Question","name":"What does certification cost?","acceptedAnswer":{{"@type":"Answer","text":"Costs vary by provider and format."}}}},{{"@type":"Question","name":"Is certification required for the role?","acceptedAnswer":{{"@type":"Answer","text":"It is often preferred but not always mandatory."}}}},{{"@type":"Question","name":"How is certification renewed?","acceptedAnswer":{{"@type":"Answer","text":"Most certifications renew every two to three years."}}}},{{"@type":"Question","name":"Which industries value certification most?","acceptedAnswer":{{"@type":"Answer","text":"Technology, finance, and healthcare value it highly."}}}}]}}
 </script>
 </div>
 </body></html>"""
@@ -102,9 +118,25 @@ def _passing_new_html():
 <div class="faq-question"><p itemprop="name">What is a good training ROI?</p><span class="toggle-icon"></span></div>
 <div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Anything above the program cost is a positive return.</p></div>
 </div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">How soon can training ROI be measured?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Early signals often show within one quarter.</p></div>
+</div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">What data is needed to calculate training ROI?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Program cost and the measurable benefit it produced.</p></div>
+</div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">Does training ROI differ by department?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">Yes, sales and technical teams often see the clearest gains.</p></div>
+</div>
+<div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+<div class="faq-question"><p itemprop="name">Who should own the training ROI calculation?</p><span class="toggle-icon"></span></div>
+<div class="faq-answer" itemprop="acceptedAnswer" itemscope itemtype="https://schema.org/Answer"><p itemprop="text">L and D and finance should agree on the method together.</p></div>
+</div>
 </section>
 <script type="application/ld+json">
-{{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{{"@type":"Question","name":"What is a good training ROI?","acceptedAnswer":{{"@type":"Answer","text":"Anything above the program cost is a positive return."}}}}]}}
+{{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{{"@type":"Question","name":"What is a good training ROI?","acceptedAnswer":{{"@type":"Answer","text":"Anything above the program cost is a positive return."}}}},{{"@type":"Question","name":"How soon can training ROI be measured?","acceptedAnswer":{{"@type":"Answer","text":"Early signals often show within one quarter."}}}},{{"@type":"Question","name":"What data is needed to calculate training ROI?","acceptedAnswer":{{"@type":"Answer","text":"Program cost and the measurable benefit it produced."}}}},{{"@type":"Question","name":"Does training ROI differ by department?","acceptedAnswer":{{"@type":"Answer","text":"Yes, sales and technical teams often see the clearest gains."}}}},{{"@type":"Question","name":"Who should own the training ROI calculation?","acceptedAnswer":{{"@type":"Answer","text":"L and D and finance should agree on the method together."}}}}]}}
 </script>
 </div>
 </body></html>"""
@@ -153,8 +185,8 @@ def test_comment_with_div_does_not_break_tag_balance(tmp_path):
 def test_broken_jsonld_fails(tmp_path):
     # Introduce a trailing comma into the FAQPage JSON-LD -> invalid JSON.
     html = _passing_optimize_html().replace(
-        '"acceptedAnswer":{"@type":"Answer","text":"Most candidates finish within a few months."}}]}',
-        '"acceptedAnswer":{"@type":"Answer","text":"Most candidates finish within a few months."}},]}',
+        '"text":"Technology, finance, and healthcare value it highly."}}]}',
+        '"text":"Technology, finance, and healthcare value it highly."}},]}',
     )
     path = _write(tmp_path, "page-green.html", html)
     assert qa_check.run(path, forced_words=1500, is_new=False) == 1

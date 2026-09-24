@@ -103,6 +103,7 @@ SEO & GEO Optimization/
 │   ├── template.html                 Blank output skeleton (CSS + FAQ JS + JSON-LD + changes-summary)
 │   ├── config_loader.py              Shared config reader
 │   ├── constants.py                  Shared stop words + rule thresholds
+│   ├── jsonstore.py                   Tiny file lock so ledger.py/verify.py add() can't race
 │   ├── scoring.py                    Pure scoring/parsing helpers (unit-tested)
 │   ├── lookup.py                     Step 1: merge scorecard + audit into one brief
 │   ├── cannibal.py                   Rule 6: find pages/blogs/past builds covering a subtopic
@@ -111,13 +112,18 @@ SEO & GEO Optimization/
 │   ├── next.py                       Rank pending pages by priority (what to optimize next)
 │   ├── striking.py                   Striking-distance report (position 8-20 with impressions)
 │   ├── check_bots.py                 robots.txt retrieval-bot access check
+│   ├── technical_seo.py              Live noindex + canonical + hreflang check on the published URL
+│   ├── sitecheck.py                  Sitemap-vs-inventory coverage + site-wide broken-link crawl
+│   ├── citations.py                  Citation-provenance ledger: proactive staleness + conflicts
+│   ├── linkcheck.py                  Resolve internal + breadcrumb links in a built page; flag 404s/redirects
 │   ├── meta_audit.py                 Duplicate meta title/description finder
 │   ├── llms_txt.py                   /llms.txt generator (agent/MCP; not a citation lever)
+│   ├── pricing.py                    /pricing.md skeleton generator (fill in real figures by hand)
 │   ├── verify.py                     Step 9 post-publish verification log (+ report rollup)
 │   └── qa_check.py                   QA gate (--new/--keyword; headings, images, JSON-LD, freshness, stats)
 ├── docs/guide.html               Self-contained HTML operator guide (open in a browser)
 ├── .github/workflows/ci.yml      CI: pytest + byte-compile on push/PR
-├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, striking, interlink, check_bots, verify, meta_audit, llms_txt)
+├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, striking, interlink, check_bots, verify, meta_audit, llms_txt, linkcheck, lookup, jsonstore, config_loader, technical_seo, sitecheck, citations, pricing)
 ├── requirements.txt              openpyxl (runtime) + pytest (dev)
 ├── data/                         scorecard.json, audit.json, content_ledger.json (gitignored)
 │   └── *.example.json            Committed sample data so the tooling runs before real exports

@@ -14,6 +14,7 @@ Domain/base_url come from config.json. Network is injectable so the logic is tes
 Usage:
     python optimizer/linkcheck.py "final output/<slug>-green.html"
 """
+import json
 import re
 import sys
 import urllib.request
@@ -21,7 +22,7 @@ import urllib.error
 from urllib.parse import urljoin
 
 from config_loader import CONFIG
-from qa_check import strip_note_blocks
+from qa_check import strip_note_blocks, extract_jsonld_blocks
 
 DOMAIN = re.sub(r"^www\.", "", CONFIG["domain"].lower())
 BASE_URL = CONFIG["base_url"].rstrip("/") + "/"
@@ -50,6 +51,33 @@ def extract_internal_links(html):
             seen.add(absolute)
             out.append(absolute)
     return out
+
+
+def extract_breadcrumb_links(html):
+    """Internal URLs from any BreadcrumbList JSON-LD block's itemListElement.
+
+    Breadcrumb links are not reader-visible, so they are easy to let rot silently
+    (a renamed category/blog-tag page, for instance) - checked the same way as
+    body links, in document order, deduped.
+    """
+    urls, seen = [], set()
+    for block in extract_jsonld_blocks(html):
+        try:
+            data = json.loads(block)
+        except ValueError:
+            continue
+        if data.get("@type") != "BreadcrumbList":
+            continue
+        for item in data.get("itemListElement", []):
+            url = (item or {}).get("item", "").strip()
+            if not url or url in seen:
+                continue
+            is_internal = url.startswith("/") or DOMAIN in url.lower()
+            if not is_internal:
+                continue
+            seen.add(url)
+            urls.append(urljoin(BASE_URL, url))
+    return urls
 
 
 def classify(url, status, final_url, error=None):
@@ -81,25 +109,28 @@ def fetch_status(url, timeout=15):
 def run(path, fetcher=fetch_status):
     with open(path, encoding="utf-8") as f:
         html = f.read()
-    links = extract_internal_links(html)
-    if not links:
-        print("No internal links found in the reader body.")
+    body_links = extract_internal_links(html)
+    breadcrumb_links = [u for u in extract_breadcrumb_links(html) if u not in body_links]
+    all_links = [(u, "") for u in body_links] + [(u, " (breadcrumb)") for u in breadcrumb_links]
+    if not all_links:
+        print("No internal links found in the reader body or breadcrumb JSON-LD.")
         return 0
 
-    print(f"Checking {len(links)} internal link(s) in {path}\n")
+    print(f"Checking {len(body_links)} internal link(s) in {path}"
+          + (f" + {len(breadcrumb_links)} breadcrumb link(s)" if breadcrumb_links else "") + "\n")
     problems = 0
-    for url in links:
+    for url, tag in all_links:
         status, final_url, error = fetcher(url)
         verdict = classify(url, status, final_url, error)
         if verdict == "ok":
-            print(f"  [OK      ] {url}")
+            print(f"  [OK      ] {url}{tag}")
         elif verdict == "redirect":
             problems += 1
-            print(f"  [REDIRECT] {url}\n             -> {final_url}  (link to the final URL)")
+            print(f"  [REDIRECT] {url}{tag}\n             -> {final_url}  (link to the final URL)")
         else:
             detail = error or f"HTTP {status}"
             problems += 1
-            print(f"  [BROKEN  ] {url}  ({detail})")
+            print(f"  [BROKEN  ] {url}{tag}  ({detail})")
 
     if problems:
         print(f"\n{problems} internal link(s) need fixing (broken or redirecting). "
