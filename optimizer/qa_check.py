@@ -19,11 +19,12 @@ Exit code 0 = all hard checks pass. Exit code 1 = at least one FAIL.
 """
 import sys
 import re
+import json
 import argparse
 
 from config_loader import CONFIG
 from constants import (
-    LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX, MIN_STAT_YEAR,
+    LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX, MIN_STAT_YEAR, FAQ_BAND,
 )
 
 BRAND = CONFIG["brand_name"]
@@ -35,9 +36,12 @@ COUNTRY_SLUGS = set(CONFIG.get("country_slugs", []))
 
 # ---- rule tables -----------------------------------------------------------
 
+# "try" is anchored to the start of the anchor text (real CTAs open with the verb,
+# e.g. "Try it now") so a topic anchor like "why teams try agile frameworks" doesn't
+# falsely trip the check.
 CTA_ANCHOR_PATTERNS = [
     r"\bexplore\b", r"\bdiscover\b", r"\bget started\b", r"\blearn more\b",
-    r"\bview all\b", r"\bcheck out\b", r"\btry\b", r"\bclick here\b", r"\bread more\b",
+    r"\bview all\b", r"\bcheck out\b", r"^\s*try\b", r"\bclick here\b", r"\bread more\b",
 ]
 _CTA_RE = re.compile("|".join(CTA_ANCHOR_PATTERNS), re.I)
 
@@ -141,6 +145,132 @@ def link_band(words):
             return i_max, e_max
     return LINK_BUDGET[-1][1], LINK_BUDGET[-1][2]
 
+def faq_band(words):
+    for max_w, lo, hi in FAQ_BAND:
+        if words <= max_w:
+            return lo, hi
+    return FAQ_BAND[-1][1], FAQ_BAND[-1][2]
+
+
+_HEADING_RE = re.compile(r"<h([1-6])[^>]*>(.*?)</h\1>", re.I | re.S)
+
+
+def section_chunks(html):
+    """Split into (level, heading_text, body_html) chunks: body_html is everything
+    between one heading and the next (or end of document). Feed it a note-stripped
+    reader body. Used by the section self-sufficiency and snippet-length checks."""
+    matches = list(_HEADING_RE.finditer(html))
+    chunks = []
+    for i, m in enumerate(matches):
+        level = int(m.group(1))
+        heading_text = strip_tags(m.group(2)).strip()
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(html)
+        chunks.append((level, heading_text, html[start:end]))
+    return chunks
+
+
+_DANGLING_OPEN_RE = re.compile(
+    r"^\s*(it|this|that|they|these|those|so|then|thus|also|however)\b", re.I)
+
+
+def dangling_reference_sections(html):
+    """H2/H3 sections whose first sentence opens with a bare pronoun/connective
+    (It/This/That/They/These/Those/So/Then/Thus/Also/However) - a strong signal the
+    section depends on a PRIOR section to make sense, so an AI answer engine
+    quoting just this chunk would produce a confusing or wrong answer. Returns the
+    flagged heading texts."""
+    flagged = []
+    for level, heading, body_html in section_chunks(html):
+        if level not in (2, 3):
+            continue
+        body_text = strip_tags(body_html).strip()
+        if body_text and _DANGLING_OPEN_RE.match(body_text):
+            flagged.append(heading)
+    return flagged
+
+
+def long_paragraphs(html, max_words=120):
+    """Reader-facing <p> blocks exceeding max_words - a chunk-friendliness signal
+    for GEO retrieval, which typically slices content into ~200-500 token pieces;
+    an extremely long unbroken paragraph risks truncation mid-thought. Returns a
+    list of (word_count, preview) for each flagged paragraph, feed it reader_html."""
+    flagged = []
+    for p in re.findall(r"<p[\s>][\s\S]*?</p>", html, re.I):
+        words = strip_tags(p).split()
+        if len(words) > max_words:
+            flagged.append((len(words), " ".join(words[:12]) + "..."))
+    return flagged
+
+
+_QUESTION_HEADING_RE = re.compile(
+    r"^(what|how|why|when|where|who|which|is|are|can|does|do|should)\b", re.I)
+
+
+def long_question_answers(html, max_words=70):
+    """Question-phrased H2/H3 sections (What is.../How to.../Why does...) whose
+    first paragraph runs well past featured-snippet length (Google's AI Overview/
+    snippet sweet spot is roughly 40-60 words). Feed it a note-stripped reader
+    body. Returns [(heading, word_count), ...] for sections over max_words."""
+    flagged = []
+    for level, heading, body_html in section_chunks(html):
+        if level not in (2, 3):
+            continue
+        is_question = heading.rstrip().endswith("?") or _QUESTION_HEADING_RE.match(heading.strip())
+        if not is_question:
+            continue
+        first_p = re.search(r"<p[\s>][\s\S]*?</p>", body_html, re.I)
+        para_text = strip_tags(first_p.group(0)) if first_p else strip_tags(body_html)
+        words = para_text.split()
+        if len(words) > max_words:
+            flagged.append((heading, len(words)))
+    return flagged
+
+
+_ACRONYM_DEF_RE = re.compile(r"[A-Za-z][\w&/-]*(?:\s[A-Za-z][\w&/-]*){0,4}\s*\(([A-Z]{2,6}s?)\)")
+_BARE_ACRONYM_RE = re.compile(r"\b([A-Z]{2,6}s?)\b")
+
+
+def acronym_definitions(text):
+    """Acronyms defined via an 'expansion phrase (ACRONYM)' pattern in text."""
+    return set(_ACRONYM_DEF_RE.findall(text))
+
+
+def undefined_acronym_reuse(html):
+    """H2/H3 sections that use an acronym defined via '(ACRONYM)' in an EARLIER
+    section but do not redefine it themselves - a section quoted in isolation by
+    an AI answer engine would show an undefined acronym. Deliberately narrow (only
+    acronyms the page itself chose to define this way) to avoid flagging common,
+    no-longer-jargon acronyms (AI, ROI, FAQ) that were never defined via this
+    pattern anywhere. Returns [(heading, acronym), ...]."""
+    seen_defined = set()
+    flagged = []
+    for level, heading, body_html in section_chunks(html):
+        if level not in (2, 3):
+            continue
+        body_text = strip_tags(body_html)
+        local_defs = acronym_definitions(body_text)
+        for acr in set(_BARE_ACRONYM_RE.findall(body_text)):
+            if acr not in local_defs and acr in seen_defined:
+                flagged.append((heading, acr))
+        seen_defined |= local_defs
+    return flagged
+
+
+def faq_answer_fragments(html, min_words=8):
+    """FAQ answers that read as sentence fragments rather than complete sentences -
+    a voice assistant reads the answer aloud verbatim, so a fragment sounds broken.
+    Flags an answer under min_words or missing sentence-ending punctuation.
+    Returns the flagged answer texts (truncated for display by the caller)."""
+    answers = re.findall(r'itemprop="text"[^>]*>([\s\S]*?)</p>', html, re.I)
+    flagged = []
+    for a in answers:
+        t = strip_tags(a).strip()
+        if t and (len(t.split()) < min_words or not t.endswith((".", "!", "?", '"', "”"))):
+            flagged.append(t)
+    return flagged
+
+
 def _syllables(word):
     word = re.sub(r"[^a-z]", "", word.lower())
     if not word:
@@ -172,11 +302,10 @@ def extract_jsonld_blocks(html):
 
 def invalid_jsonld_blocks(html):
     """Return a list of (index, error) for JSON-LD blocks that do not parse as JSON."""
-    import json as _json
     bad = []
     for i, block in enumerate(extract_jsonld_blocks(html), 1):
         try:
-            _json.loads(block.strip())
+            json.loads(block.strip())
         except ValueError as e:
             bad.append((i, str(e).split("\n")[0]))
     return bad
@@ -258,6 +387,17 @@ def stale_stat_years(text, min_year=MIN_STAT_YEAR):
     return sorted(flagged)
 
 
+def repeated_percent_stats(text, min_repeats=3):
+    """Exact percentage values (e.g. '40%') repeated min_repeats+ times in the reader
+    text. Reusing the identical figure across sections is a padding/repetition signal
+    (Rule 14: no repeats) that the mechanical FAQ/JSON-LD count checks cannot catch,
+    since it is about content variety, not structure. Returns {value: count}."""
+    counts = {}
+    for m in re.finditer(r"\b\d{1,3}(?:\.\d+)?%", text):
+        counts[m.group(0)] = counts.get(m.group(0), 0) + 1
+    return {v: c for v, c in counts.items() if c >= min_repeats}
+
+
 def has_freshness_signal(html, text, min_year=MIN_STAT_YEAR):
     """True if the page shows a current-year freshness date: a JSON-LD dateModified/
     datePublished >= min_year, or visible 'updated/reviewed ... 20YY' >= min_year."""
@@ -274,22 +414,66 @@ def schema_completeness(html):
     """Report incomplete typed JSON-LD blocks and which recommended types are absent.
 
     Returns (missing_fields, absent_types): missing_fields is a list of strings for a
-    present Article/BlogPosting that lacks required fields; absent_types lists
+    present Article/BlogPosting/HowTo that lacks required fields; absent_types lists
     recommended schema (Article, BreadcrumbList) not present at all (informational).
+    Parses each block as JSON (invalid blocks are already caught separately by
+    invalid_jsonld_blocks and are just skipped here) rather than substring-matching
+    the concatenated text, so nested fields (author.jobTitle, HowTo.step[].name) can
+    actually be checked, not just top-level key presence.
     """
-    blob = " ".join(extract_jsonld_blocks(html))
     missing = []
-    has_article = re.search(r'"@type"\s*:\s*"(Article|BlogPosting)"', blob)
-    if has_article:
-        for field in ("headline", "author", "datePublished", "dateModified"):
-            if f'"{field}"' not in blob:
-                missing.append(field)
+    has_article = has_breadcrumb = False
+
+    for block in extract_jsonld_blocks(html):
+        try:
+            data = json.loads(block.strip())
+        except ValueError:
+            continue
+        t = data.get("@type") if isinstance(data, dict) else None
+
+        if t in ("Article", "BlogPosting"):
+            has_article = True
+            for field in ("headline", "author", "datePublished", "dateModified"):
+                if field not in data:
+                    missing.append(field)
+
+        elif t == "BreadcrumbList":
+            has_breadcrumb = True
+
+        elif t == "HowTo":
+            if "name" not in data:
+                missing.append("HowTo.name")
+            steps = data.get("step") or []
+            if not steps:
+                missing.append("HowTo.step (no steps listed)")
+            for i, s in enumerate(steps, 1):
+                if not (isinstance(s, dict) and s.get("name") and s.get("text")):
+                    missing.append(f"HowTo.step[{i}] missing name/text")
+
     absent = []
     if not has_article:
         absent.append("Article/BlogPosting")
-    if not re.search(r'"@type"\s*:\s*"BreadcrumbList"', blob):
+    if not has_breadcrumb:
         absent.append("BreadcrumbList")
     return missing, absent
+
+
+def author_credential_gap(html):
+    """True if an Article/BlogPosting's author is a Person node lacking jobTitle
+    or description - a weak E-E-A-T signal. Soft/informational, not a hard schema
+    requirement: a bare-string author (just a name) has no structured field to add
+    credentials to, so it is not flagged here."""
+    for block in extract_jsonld_blocks(html):
+        try:
+            data = json.loads(block.strip())
+        except ValueError:
+            continue
+        if not isinstance(data, dict) or data.get("@type") not in ("Article", "BlogPosting"):
+            continue
+        author = data.get("author")
+        if isinstance(author, dict) and not (author.get("jobTitle") or author.get("description")):
+            return True
+    return False
 
 # ---- checks ----------------------------------------------------------------
 
@@ -412,6 +596,11 @@ def run(path, forced_words=None, is_new=False, keyword=None):
     else:
         check(faq_html > 0, "FAQ present (microdata)", f"{faq_html} questions; no JSON-LD script block")
 
+    # 15a. FAQ count within the word-count band (Rule 11; QUALITY-RULES.md FAQ count bands)
+    faq_lo, faq_hi = faq_band(words)
+    check(faq_lo <= faq_html <= faq_hi, f"FAQ count in {faq_lo}-{faq_hi} band (~{words} words)",
+          f"found {faq_html}")
+
     # 15b. Every JSON-LD block parses as valid JSON
     bad_ld = invalid_jsonld_blocks(html)
     check(not bad_ld, "JSON-LD blocks parse as valid JSON",
@@ -454,6 +643,9 @@ def run(path, forced_words=None, is_new=False, keyword=None):
           "missing: " + ", ".join(missing_fields))
     if absent_types:
         info.append(("Recommended schema absent", ", ".join(absent_types) + " (add when applicable)"))
+    if author_credential_gap(html):
+        info.append(("Author schema missing credentials",
+                      "add jobTitle or description to the author Person node (E-E-A-T)"))
 
     # 16. Rough tag balance (ignore tags inside HTML comments, e.g. template examples)
     html_no_comments = re.sub(r"<!--[\s\S]*?-->", " ", html)
@@ -476,6 +668,39 @@ def run(path, forced_words=None, is_new=False, keyword=None):
     if fre is not None:
         verdict = "good" if fre >= 60 else "ok" if fre >= 50 else "hard to read, simplify"
         info.append(("Flesch reading ease", f"{fre} ({verdict}; target 60+)"))
+
+    # Informational: the same exact stat reused 3+ times reads as padding (Rule 14)
+    repeats = repeated_percent_stats(text)
+    if repeats:
+        detail = ", ".join(f"{v} x{c}" for v, c in sorted(repeats.items(), key=lambda x: -x[1]))
+        info.append(("Repeated stat", f"{detail} - vary the supporting point or drop duplicates"))
+
+    # Informational: section self-sufficiency for AI extraction (AI answer engines
+    # usually quote a single H2/H3 chunk, not the whole page)
+    dangling = dangling_reference_sections(reader_html)
+    if dangling:
+        info.append(("Section may depend on prior context",
+                      "; ".join(dangling[:5]) + " - opens on a bare pronoun, restate the subject"))
+
+    long_paras = long_paragraphs(reader_html)
+    if long_paras:
+        detail = "; ".join(f"{n} words (\"{prev}\")" for n, prev in long_paras[:3])
+        info.append(("Long paragraph (chunk-friendliness)", detail))
+
+    long_qa = long_question_answers(reader_html)
+    if long_qa:
+        detail = "; ".join(f'"{h}" ({n} words)' for h, n in long_qa[:3])
+        info.append(("Question-heading answer over snippet length (~60w target)", detail))
+
+    frags = faq_answer_fragments(html)
+    if frags:
+        detail = "; ".join(f'"{f[:60]}..."' if len(f) > 60 else f'"{f}"' for f in frags[:3])
+        info.append(("FAQ answer reads as a fragment (voice-readability)", detail))
+
+    reused = undefined_acronym_reuse(reader_html)
+    if reused:
+        detail = "; ".join(f'"{h}" reuses {a}' for h, a in reused[:5])
+        info.append(("Acronym reused without local redefinition", detail))
 
     # ---- report ----
     mode = "NEW page" if is_new else "OPTIMIZE existing"

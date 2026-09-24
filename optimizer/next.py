@@ -16,6 +16,11 @@ import os
 import re
 import sys
 
+try:
+    from constants import small_inventory_warning
+except ImportError:
+    from optimizer.constants import small_inventory_warning
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCORECARD = os.path.join(BASE, "data", "scorecard.json")
 LEDGER = os.path.join(BASE, "data", "content_ledger.json")
@@ -67,6 +72,9 @@ def main(n):
     pend = pending_pages(pages, done)
 
     print(f"\n{len(pend)} pending / {len(pages)} total pages ({len(done)} already built).")
+    warning = small_inventory_warning(len(pages), "scorecard.json")
+    if warning:
+        print(warning)
     print(f"Top {min(n, len(pend))} to optimize next (by priority):\n")
     for p in pend[:n]:
         print(f"  [{p.get('priority_score', 0):>3}] {p.get('category', '?'):<22} "

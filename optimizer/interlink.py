@@ -19,9 +19,9 @@ import re
 import sys
 
 try:
-    from constants import STOP_WORDS as STOP
+    from constants import STOP_WORDS as STOP, small_inventory_warning
 except ImportError:
-    from optimizer.constants import STOP_WORDS as STOP
+    from optimizer.constants import STOP_WORDS as STOP, small_inventory_warning
 try:
     from config_loader import CONFIG
 except ImportError:
@@ -99,6 +99,9 @@ def main(target):
 
     ranked = rank_inbound(target_tokens, pages, exclude_tail, country_slugs)
     print(f'\nInbound-link opportunities for "{label}" (topic: {", ".join(sorted(target_tokens))}):\n')
+    warning = small_inventory_warning(len(pages), "scorecard.json")
+    if warning:
+        print(f"  {warning}\n")
     if not ranked:
         print("  No topically related source pages found.")
         return 0

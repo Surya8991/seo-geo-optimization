@@ -157,6 +157,53 @@ class TestStaleStats:
         assert qa_check.stale_stat_years("2019 data and 2021 data, plus 2019 report.") == [2019, 2021]
 
 
+class TestAcronymReuse:
+    def test_definition_pattern_detected(self):
+        assert qa_check.acronym_definitions("Subject matter experts (SMEs) keep it real.") == {"SMEs"}
+
+    def test_no_definition_pattern_is_empty(self):
+        assert qa_check.acronym_definitions("No parenthetical acronym here at all.") == set()
+
+    def test_reuse_in_later_section_without_redefinition_is_flagged(self):
+        html = ("<h3>One</h3><p>Subject matter experts (SMEs) keep content accurate.</p>"
+                "<h3>Two</h3><p>Bring in SMEs early for the best results.</p>")
+        flagged = qa_check.undefined_acronym_reuse(html)
+        assert flagged == [("Two", "SMEs")]
+
+    def test_redefined_locally_is_not_flagged(self):
+        html = ("<h3>One</h3><p>Subject matter experts (SMEs) keep content accurate.</p>"
+                "<h3>Two</h3><p>Subject matter experts (SMEs) again, redefined here.</p>")
+        assert qa_check.undefined_acronym_reuse(html) == []
+
+    def test_acronym_never_defined_via_parens_is_not_flagged(self):
+        # ROI is used but never defined via the "(ACRONYM)" pattern anywhere -
+        # deliberately not flagged, to avoid noise on common business acronyms.
+        html = "<h3>One</h3><p>Track training ROI carefully.</p><h3>Two</h3><p>ROI matters.</p>"
+        assert qa_check.undefined_acronym_reuse(html) == []
+
+    def test_same_section_reuse_of_its_own_definition_not_flagged(self):
+        html = "<h3>One</h3><p>Subject matter experts (SMEs) help. SMEs add context too.</p>"
+        assert qa_check.undefined_acronym_reuse(html) == []
+
+
+class TestRepeatedStats:
+    def test_flags_value_repeated_three_plus_times(self):
+        text = "40% of skills fade. Later, 40% of roles change. Again, 40% is cited."
+        assert qa_check.repeated_percent_stats(text) == {"40%": 3}
+
+    def test_two_occurrences_not_flagged(self):
+        text = "40% here. And 40% there."
+        assert qa_check.repeated_percent_stats(text) == {}
+
+    def test_distinct_values_not_conflated(self):
+        text = "71% adoption. 195% growth. 71% again. 195% again. 71% a third time."
+        result = qa_check.repeated_percent_stats(text)
+        assert result == {"71%": 3}
+
+    def test_no_percent_signals_returns_empty(self):
+        assert qa_check.repeated_percent_stats("No stats mentioned here at all.") == {}
+
+
 class TestFreshness:
     def test_jsonld_datemodified_counts(self):
         html = '<script type="application/ld+json">{"dateModified":"2026-09-01"}</script>'
@@ -190,3 +237,50 @@ class TestSchemaCompleteness:
     def test_absent_types_listed_when_no_article(self):
         _, absent = qa_check.schema_completeness('<script type="application/ld+json">{"@type":"FAQPage"}</script>')
         assert "Article/BlogPosting" in absent and "BreadcrumbList" in absent
+
+    def test_complete_howto_has_no_missing(self):
+        html = ('<script type="application/ld+json">{"@type":"HowTo","name":"Guide",'
+                '"step":[{"@type":"HowToStep","name":"Step 1","text":"Do X"},'
+                '{"@type":"HowToStep","name":"Step 2","text":"Do Y"}]}</script>')
+        missing, _ = qa_check.schema_completeness(html)
+        assert missing == []
+
+    def test_howto_missing_name_and_empty_steps_flagged(self):
+        html = '<script type="application/ld+json">{"@type":"HowTo","step":[]}</script>'
+        missing, _ = qa_check.schema_completeness(html)
+        assert "HowTo.name" in missing
+        assert any("no steps" in m for m in missing)
+
+    def test_howto_step_missing_text_flagged(self):
+        html = ('<script type="application/ld+json">{"@type":"HowTo","name":"Guide",'
+                '"step":[{"@type":"HowToStep","name":"Step 1"}]}</script>')
+        missing, _ = qa_check.schema_completeness(html)
+        assert any("step[1]" in m for m in missing)
+
+
+class TestAuthorCredentialGap:
+    def test_string_author_not_flagged(self):
+        html = ('<script type="application/ld+json">{"@type":"Article","headline":"x",'
+                '"author":"y","datePublished":"2026-01-01","dateModified":"2026-09-01"}</script>')
+        assert qa_check.author_credential_gap(html) is False
+
+    def test_person_author_without_credentials_flagged(self):
+        html = ('<script type="application/ld+json">{"@type":"Article","headline":"x",'
+                '"author":{"@type":"Person","name":"Jane Doe"},'
+                '"datePublished":"2026-01-01","dateModified":"2026-09-01"}</script>')
+        assert qa_check.author_credential_gap(html) is True
+
+    def test_person_author_with_jobtitle_not_flagged(self):
+        html = ('<script type="application/ld+json">{"@type":"Article","headline":"x",'
+                '"author":{"@type":"Person","name":"Jane Doe","jobTitle":"L&D Lead"},'
+                '"datePublished":"2026-01-01","dateModified":"2026-09-01"}</script>')
+        assert qa_check.author_credential_gap(html) is False
+
+    def test_person_author_with_description_not_flagged(self):
+        html = ('<script type="application/ld+json">{"@type":"Article","headline":"x",'
+                '"author":{"@type":"Person","name":"Jane Doe","description":"L&D writer"},'
+                '"datePublished":"2026-01-01","dateModified":"2026-09-01"}</script>')
+        assert qa_check.author_credential_gap(html) is False
+
+    def test_no_article_returns_false(self):
+        assert qa_check.author_credential_gap('<script type="application/ld+json">{"@type":"FAQPage"}</script>') is False

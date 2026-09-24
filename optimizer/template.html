@@ -78,10 +78,30 @@
      This serves as the AIO/featured-snippet target. No special card or styling -
      it reads as natural content but is structured to be pulled by Google.
      Follow with 2-3 sentences expanding the context before the first H2.
+     class="aio-answer" marks it as a speakable/extraction target (see the
+     Article JSON-LD's "speakable" block below) - keep the class even though it
+     carries no visual styling.
 -->
-<p>{{40-60 word answer-first definition of the topic, containing primary keyword. This is the paragraph Google pulls for AI Overview and featured snippets. Write it as natural prose, not a card.}}</p>
+<p class="aio-answer">{{40-60 word answer-first definition of the topic, containing primary keyword. This is the paragraph Google pulls for AI Overview and featured snippets. Write it as natural prose, not a card.}}</p>
 
 <p>{{Expand with 2-3 sentences of context: why this matters, who benefits, what this page covers.}}</p>
+
+<!-- ===== OPTIONAL: TABLE OF CONTENTS + KEY TERMS =====
+     For a longer page (4+ H2s), add a short jump-link ToC here using the same
+     ids you give each H2/H3 below - it also gives an AI/user a precise section
+     to cite (page#section-id), not just the whole page.
+     If the page defines several jargon terms, a short <dl> here is a visible,
+     machine-friendly complement to a DefinedTerm/DefinedTermSet schema block
+     (add one only when it's a real fit - most pages won't need it).
+<nav aria-label="On this page">
+  <ul>
+    <li><a href="#{{section-1-slug}}">{{Section 1 title}}</a></li>
+  </ul>
+</nav>
+<dl>
+  <dt>{{Term}}</dt><dd>{{one-sentence definition}}</dd>
+</dl>
+-->
 
 <!-- ===== BODY =====
      - Keep existing good content unmarked.
@@ -91,10 +111,17 @@
      - Tables go inside <div class="table-scroll">.
      - Max 1 link per paragraph. Descriptive anchor text, no CTA words.
      - No country/city page links (e.g., example.com/australia/).
+     - SELF-SUFFICIENCY (AI answer engines usually quote ONE H2/H3 chunk, not the
+       whole page): give every H2/H3 an id slug (for ToC + precise citation), open
+       its first sentence by naming the actual subject rather than a bare pronoun
+       ("It"/"This"/"They"/"So"), and define any acronym again if this section
+       could plausibly be quoted on its own. qa_check.py's "Section may depend on
+       prior context" INFO check catches the pronoun case mechanically; the rest
+       is a manual read-each-section-in-isolation pass before shipping.
 -->
 
-<h2>{{Section H2}}</h2>
-<p>{{content}}</p>
+<h2 id="{{section-slug}}">{{Section H2}}</h2>
+<p>{{content, opening sentence names the actual subject}}</p>
 
 <!-- Example new block:
 <div class="new-block">
@@ -156,7 +183,11 @@
 <!-- ===== SCHEMA (JSON-LD) - fill in and KEEP on publish. See MODERN-SEO-PLAYBOOK.md sec 5.
      Article + BreadcrumbList always (add HowTo only for real step sequences). qa_check.py
      requires a present Article to include headline, author, datePublished, dateModified, and
-     a current-year dateModified is what satisfies the freshness gate. Keep these live. -->
+     a current-year dateModified is what satisfies the freshness gate. Keep these live.
+     author.jobTitle or author.description is an E-E-A-T signal (qa_check.py flags a bare
+     name-only Person node as an INFO note - not a hard requirement, but worth filling in).
+     "speakable" points voice/AI assistants at the extraction targets: the H1 and the
+     opening aio-answer paragraph, at minimum. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -164,9 +195,10 @@
   "headline": "{{H1 / title}}",
   "datePublished": "{{YYYY-MM-DD}}",
   "dateModified": "{{YYYY-MM-DD, current-year update date}}",
-  "author": { "@type": "Person", "name": "{{author}}", "sameAs": "{{author profile URL}}" },
+  "author": { "@type": "Person", "name": "{{author}}", "jobTitle": "{{author's role/title}}", "sameAs": "{{author profile URL}}" },
   "publisher": { "@type": "Organization", "name": "{{BRAND}}" },
-  "mainEntityOfPage": "{{canonical page URL}}"
+  "mainEntityOfPage": "{{canonical page URL}}",
+  "speakable": { "@type": "SpeakableSpecification", "cssSelector": ["h1", ".aio-answer"] }
 }
 </script>
 <script type="application/ld+json">
@@ -180,9 +212,13 @@
   ]
 }
 </script>
-<!-- Add HowTo only for a real step sequence:
+<!-- Add HowTo only for a real step/numbered-practice sequence. qa_check.py checks a
+     present HowTo has a name and that every step has BOTH name and text - an empty
+     step list or a step missing text is worse than no HowTo block at all:
 <script type="application/ld+json">
-{ "@context": "https://schema.org", "@type": "HowTo", "name": "{{task}}", "step": [] }
+{ "@context": "https://schema.org", "@type": "HowTo", "name": "{{task}}", "step": [
+  { "@type": "HowToStep", "name": "{{step 1 title}}", "text": "{{one-sentence summary}}" }
+] }
 </script>
 -->
 

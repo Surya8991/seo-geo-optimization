@@ -1,6 +1,6 @@
 # Quality Rules - QA Reference
 
-The 12 hard rules from `AGENTS.md`, restated as **pass criteria** with how each is
+The hard rules from `AGENTS.md`, restated as **pass criteria** with how each is
 verified. `AUTO` = enforced by `qa_check.py`. `MANUAL` = human judgment required.
 `AGENTS.md` is the authoritative wording; this is the checklist you run against.
 Wherever this says "the brand" or `example.com`, the real values come from `config.json`.
@@ -15,15 +15,39 @@ python optimizer/linkcheck.py "final output/{slug}-green.html"   # internal link
 `--words` is advisory: `qa_check.py` computes its own reader word count (review/publishing/
 changes notes stripped, even when they wrap tables) and uses that for the link-budget band, so
 a too-high `--words` cannot unlock more links than the copy earns. `linkcheck.py` is a separate
-gate that fetches every internal link and fails on a 404 (broken) or a 301/302 (a stale slug
-pointing at a non-canonical URL); fix each to its final URL before saving.
+gate that fetches every internal link - including any URL inside a `BreadcrumbList` JSON-LD
+block, which isn't reader-visible and can rot silently - and fails on a 404 (broken) or a
+301/302 (a stale slug pointing at a non-canonical URL); fix each to its final URL before saving.
 
-Beyond the 12 rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
+Beyond the rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
 skipped levels); that every `<img>` has descriptive alt text and a non-generic filename; that
-every JSON-LD block parses and a present Article carries headline/author/datePublished/
-dateModified; a current-year freshness date (dateModified or a visible "last updated"); and no
-pre-2024 statistics (a year before 2024 sitting next to a stat signal). Run
-`optimizer/meta_audit.py` separately to find duplicate meta titles/descriptions across the site.
+every JSON-LD block parses and a present Article/HowTo carries its required fields
+(headline/author/datePublished/dateModified, or name + every step's name+text); a current-year
+freshness date (dateModified or a visible "last updated"); and no pre-2024 statistics (a year
+before 2024 sitting next to a stat signal).
+
+It also reports several soft `[INFO]` signals - not hard fails, but worth acting on:
+- **Repeated stat** - the same exact percentage (e.g. `40%`) appears 3+ times in the reader
+  text, a padding signal the FAQ/JSON-LD count checks can't catch since it's about content
+  variety, not structure.
+- **Section may depend on prior context** - an H2/H3 opens on a bare pronoun/connective
+  (It/This/They/So/Then/Also/However), a sign the section wouldn't make sense if an AI answer
+  engine quoted it in isolation (Rule 16).
+- **Long paragraph (chunk-friendliness)** - a `<p>` over ~120 words, which GEO retrieval systems
+  risk truncating mid-thought.
+- **Question-heading answer over snippet length** - a question-phrased H2/H3 whose first
+  paragraph runs past ~60 words, the rough featured-snippet/AI-Overview sweet spot.
+- **FAQ answer reads as a fragment** - an answer under 8 words or missing sentence-ending
+  punctuation; voice assistants read it aloud verbatim, so a fragment sounds broken.
+- **Author schema missing credentials** - the Article's author is a Person node with no
+  `jobTitle`/`description` (a weak E-E-A-T signal).
+
+Run `optimizer/meta_audit.py` separately to find duplicate meta titles/descriptions across the
+site, and `optimizer/technical_seo.py <url>` against the LIVE published URL to confirm it isn't
+accidentally noindexed and has a correct, singular canonical tag (both are site-template-level
+tags the pre-publish draft never carries, so `qa_check.py` can't check them). Both
+`meta_audit.py` and the cannibalization/prioritization tools now warn if the site inventory is
+too small (under 5 pages) for their comparison to mean anything.
 
 | # | Rule | Pass criteria | Check |
 |---|------|---------------|-------|
@@ -41,6 +65,7 @@ pre-2024 statistics (a year before 2024 sitting next to a stat signal). Run
 | 10 | No AI signals | No em dashes; varied sentences; no filler ("In today's rapidly evolving...", "It's worth noting...") | AUTO (dashes) + MANUAL (voice) |
 | 11 | FAQ quality + limits | FAQs target PAA / new angles, not body rehash; count band by words; HTML items == JSON-LD entries | AUTO (count) + MANUAL (angle) |
 | 12 | Stat verification | Every stat real, sourced, and 2024-2026; unverifiable stats removed | AUTO (flags pre-2024 years near a stat) + MANUAL (real/sourced) |
+| 16 | Section self-sufficiency for AI extraction | Each H2/H3 opens by naming its actual subject (not a bare pronoun); acronyms redefined if the section could be quoted alone; heading has an `id` slug | AUTO (dangling-opener, long-paragraph, long-question-answer INFO checks) + MANUAL (read each section in isolation) |
 
 ## Link budget bands (Rule 3)
 

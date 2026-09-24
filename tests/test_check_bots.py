@@ -43,3 +43,13 @@ def test_multiple_user_agents_share_a_block():
     groups = check_bots.parse_robots(robots)
     assert check_bots.agent_can_fetch(groups, "GPTBot", "/") is False
     assert check_bots.agent_can_fetch(groups, "CCBot", "/") is False
+
+
+def test_generic_fetch_error_names_the_exception_type(monkeypatch, capsys):
+    def boom(url, timeout=15):
+        raise TimeoutError("timed out")
+    monkeypatch.setattr(check_bots, "fetch", boom)
+    rc = check_bots.main("https://example.com")
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "TimeoutError" in out
