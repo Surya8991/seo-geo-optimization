@@ -12,6 +12,11 @@ import json
 import os
 import sys
 
+try:
+    from constants import small_inventory_warning
+except ImportError:
+    from optimizer.constants import small_inventory_warning
+
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCORECARD = os.path.join(BASE, "data", "scorecard.json")
 
@@ -36,6 +41,9 @@ def main(lo, hi, min_imp):
     hits = striking_pages(pages, lo, hi, min_imp)
     print(f"\nStriking-distance pages (position {lo}-{hi}, impressions >= {min_imp:,}):")
     print(f"{len(hits)} of {len(pages)} pages. Highest upside first:\n")
+    warning = small_inventory_warning(len(pages), "scorecard.json")
+    if warning:
+        print(warning + "\n")
     for p in hits:
         print(f"  pos {p.get('position'):>5}  imp {p.get('impressions', 0):>9,}  "
               f"CTR {p.get('ctr', 0):>5}%  {p.get('slug') or p.get('url')}")

@@ -31,6 +31,7 @@ Open `config.json` and set:
 - `optimizer/template.html` - blank output skeleton (CSS + FAQ JS + JSON-LD).
 - `optimizer/config_loader.py` - shared config reader.
 - `optimizer/constants.py` - shared stop-word list + rule thresholds (link/meta bands).
+- `optimizer/jsonstore.py` - tiny cross-platform file lock (`locked()`) so concurrent `ledger.py add` / `verify.py add` invocations cannot race and drop an entry.
 - `optimizer/scoring.py` - pure, unit-tested scoring/parsing helpers used by `build_scorecard.py`.
 - `optimizer/lookup.py` - Step 1: merge scorecard + audit into one brief with the lever to pull.
 - `optimizer/cannibal.py` - Rule 6: check if another page, blog, or past build already owns a subtopic (reads the content ledger too).
@@ -40,9 +41,13 @@ Open `config.json` and set:
 - `optimizer/next.py` - rank pending pages by priority (skips ones already built) to pick the next page to optimize.
 - `optimizer/striking.py` - list striking-distance pages (avg position 8-20 with impressions), the highest-ROI targets.
 - `optimizer/llms_txt.py` - generate an `/llms.txt` from the inventory (agent/MCP convenience; not a citation lever).
+- `optimizer/pricing.py` - generate a `/pricing.md` skeleton (name + URL per money page) so an AI agent evaluating the service can parse pricing instead of skipping a "contact sales" wall; fill in real price/limits/features by hand, never invented.
 - `optimizer/interlink.py` - inbound-link finder (Checklist #29): existing pages that should link TO the page being optimized.
-- `optimizer/linkcheck.py` - resolve every internal link in the built page and flag any that 404 (broken) or 301/302 (redirecting to a non-canonical URL). Run it before saving so no stale-slug or dead internal link ships.
+- `optimizer/linkcheck.py` - resolve every internal link in the built page and flag any that 404 (broken) or 301/302 (redirecting to a non-canonical URL); also resolves any URL inside a `BreadcrumbList` JSON-LD block, since those aren't reader-visible and can rot silently. Run it before saving so no stale-slug or dead internal link ships.
 - `optimizer/check_bots.py` - fetch the live `robots.txt` and report whether the AI retrieval/search bots are allowed (a make-or-break GEO lever).
+- `optimizer/technical_seo.py` - fetch the LIVE published page and check it isn't accidentally noindexed, has exactly one correct self-referencing canonical tag, and (if present) a valid, self-referencing hreflang set - all site-template-level tags the pre-publish draft never carries, so `qa_check.py` can't check them.
+- `optimizer/sitecheck.py` - site-wide checks that need the full inventory, not just one page: sitemap-vs-inventory coverage (orphans in either direction) and a broken-link crawl across every money/blog page, not just the one being optimized.
+- `optimizer/citations.py` - citation-provenance ledger: record every external stat's source/year so staleness can be caught proactively (before it crosses `MIN_STAT_YEAR`) and conflicting numbers across pages can be found by search.
 - `optimizer/verify.py` - the post-publish verification log (WORKFLOW Step 9): record per-engine citation presence + GSC deltas; `verify.py report` rolls them up.
 - `build_scorecard.py` - builds `scorecard.json` + `audit.json` from GSC + inventory exports.
 - `docs/guide.html` - a self-contained HTML operator guide (open in a browser) covering setup, both tracks, every helper, and the QA gate.
@@ -50,7 +55,7 @@ Open `config.json` and set:
 - `data/verification_log.json` - post-publish verification results (created on first `verify.py add`).
 - `data/*.example.json` - committed sample scorecard/audit so the tooling runs before you have GSC exports.
 - `.github/workflows/ci.yml` - CI: runs the pytest suite and byte-compiles all Python on every push/PR.
-- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py`, `next.py`, `interlink.py`, `check_bots.py`, `verify.py`, `meta_audit.py`, `striking.py`, `llms_txt.py`, `linkcheck.py` (`pip install -r requirements.txt && pytest`). Tests pin a fixed config via `SEO_GEO_CONFIG` (see `tests/fixtures/config.test.json`), so they stay green no matter which brand `config.json` holds.
+- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py`, `next.py`, `interlink.py`, `check_bots.py`, `verify.py`, `meta_audit.py`, `striking.py`, `llms_txt.py`, `linkcheck.py`, `lookup.py`, `jsonstore.py`, `config_loader.py`, `technical_seo.py`, `sitecheck.py`, `citations.py`, `pricing.py` (`pip install -r requirements.txt && pytest`). Tests pin a fixed config via `SEO_GEO_CONFIG` (see `tests/fixtures/config.test.json`), so they stay green no matter which brand `config.json` holds.
 - `WORKFLOW.md` - the per-page operating procedure (optimize-existing track), including Step 9 post-publish verification.
 - `.claude/commands/optimize-page.md` - optimize an existing page (`/optimize-page <slug>`).
 - `.claude/commands/new-page.md` - create a new page from scratch (`/new-page <topic>`).
@@ -87,6 +92,7 @@ Self-contained: inline CSS + inline JS. New pages (the `/new-page` track) ship c
 13. **Secondary + longtail keyword coverage.** Beyond the primary keyword, place the secondary and longtail terms found in research naturally in H2/H3s and body. Never force them; never stuff.
 14. **Flow and readability.** Logical section order, one idea per paragraph, no jumps or repeats, answer-first per section. Short paragraphs, active voice, plain words. Target Flesch reading ease 60+ (`qa_check.py` reports it).
 15. **Changes summary (optimize mode).** End the review copy with the `.changes-summary` table documenting exactly what was done. `qa_check.py` requires it in optimize mode; new pages omit it.
+16. **Section self-sufficiency for AI extraction.** AI answer engines usually quote a single H2/H3 chunk, not the whole page, so each section must stand alone: open with the actual subject named, not a bare pronoun ("It"/"This"/"They"/"So"); redefine an acronym if the section could plausibly be quoted on its own; give the H2/H3 an `id` slug so it can be cited/linked precisely. `qa_check.py` flags a dangling-pronoun opener, an over-length paragraph, and a too-long answer under a question-phrased heading as INFO notes - not hard fails, but read each section in isolation before shipping.
 
 ## 8-lever SEO framework (address all 8 on every page)
 1. **Title/Meta SERP validation** - competitor titles, year for freshness, meta hook, char counts (title <=60, meta 140-160, target ~150-155).

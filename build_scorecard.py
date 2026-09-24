@@ -14,7 +14,9 @@ INPUT CONTRACT (adjust the constants below to match your own exports):
         "pages"        col A = slug, B = title, C = meta_title, D = meta_description
         "money_pages"  col A = name, B = url
         "blog"         col A = slug
-        "meta_data"    col B = meta_title, C = meta_description, D = meta_keywords, Q(16) = h1_tag
+        "meta_data"    header row required; resolved by name (meta_title/title,
+                       meta_keywords/keywords, h1_tag/h1), falling back to the
+                       default position (B, D, Q) with a warning if a header is missing
   - GSC_DIR/AGGREGATE_XLSX : GSC "Pages" sheet, col A = url, B = clicks, C = impressions, D = ctr, E = position
   - GSC_DIR/<monthly files> : same "Pages" sheet, col A = url, B = clicks (used for trend)
 
@@ -33,7 +35,7 @@ from optimizer.config_loader import load_config
 from optimizer.scoring import (
     safe_float, safe_int, ctr_to_number, ctr_column_is_fraction,
     compute_trend, trend_label, position_band, expected_ctr,
-    impression_band, classify_intent,
+    impression_band, classify_intent, money_page_pattern_regex, header_index,
 )
 
 CONFIG = load_config()
@@ -41,6 +43,8 @@ BRAND = CONFIG["brand_name"]
 BASE_URL = CONFIG["base_url"].rstrip("/") + "/"
 INFO_PATH = CONFIG["info_path"]
 COURSE_KEYWORD_MAP = CONFIG.get("course_keyword_map", {})
+MONEY_PAGE_PATTERN = CONFIG.get("money_page_pattern", "")
+MONEY_PAGE_RE = money_page_pattern_regex(MONEY_PAGE_PATTERN)
 
 # ---------------------------------------------------------------------------
 # Paths and input files  (EDIT THESE to match your exports)
@@ -98,6 +102,13 @@ if SHEET_MONEY in wb.sheetnames:
             "url": str(row[1]).strip() if row[1] else "",
         })
 print(f"   Found {len(money_pages)} money pages")
+if MONEY_PAGE_RE:
+    mismatched = [mp["url"] for mp in money_pages if not MONEY_PAGE_RE.match(mp["url"])]
+    if mismatched:
+        print(f"   WARNING: {len(mismatched)} money page URL(s) don't match config.json's "
+              f"money_page_pattern ('{MONEY_PAGE_PATTERN}'):")
+        for u in mismatched[:5]:
+            print(f"     - {u}")
 
 # 3. Blog slugs (for cannibalization)
 print("[3/7] Loading blog slugs ...")
@@ -111,16 +122,25 @@ print(f"   Found {len(blog_slugs)} blog slugs")
 
 # 4. Meta data (join on meta_title)
 print("[4/7] Loading meta data ...")
+
 meta_by_title = {}
 if SHEET_META in wb.sheetnames:
-    for row in wb[SHEET_META].iter_rows(min_row=2, values_only=True):
-        if row is None or len(row) < 2 or row[1] is None:
+    meta_rows = wb[SHEET_META].iter_rows(min_row=1, values_only=True)
+    header = next(meta_rows, None) or []
+    title_idx, w1 = header_index(header, ["meta_title", "title"], 1)
+    kw_idx, w2 = header_index(header, ["meta_keywords", "keywords"], 3)
+    h1_idx, w3 = header_index(header, ["h1_tag", "h1"], 16)
+    for label, w in (("meta_title (join key)", w1), ("meta_keywords", w2), ("h1_tag", w3)):
+        if w:
+            print(f"   WARNING: meta_data {w} for {label}")
+    for row in meta_rows:
+        if row is None or len(row) <= title_idx or row[title_idx] is None:
             continue
-        title = str(row[1]).strip()
-        kw = str(row[3]).strip() if (len(row) > 3 and row[3]) else ""
+        title = str(row[title_idx]).strip()
+        kw = str(row[kw_idx]).strip() if (len(row) > kw_idx and row[kw_idx]) else ""
         if kw == "NULL":
             kw = ""
-        h1 = str(row[16]).strip() if (len(row) > 16 and row[16]) else ""
+        h1 = str(row[h1_idx]).strip() if (len(row) > h1_idx and row[h1_idx]) else ""
         meta_by_title[title] = {"meta_keywords": kw, "h1_tag": h1}
 
 for p in pages:

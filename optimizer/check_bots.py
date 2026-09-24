@@ -112,7 +112,9 @@ def main(base_url):
         print(f"HTTP error {e.code} fetching robots.txt.")
         return 1
     except Exception as e:
-        print(f"Could not fetch robots.txt: {e}")
+        # Name the exception type (URLError, TimeoutError, SSLCertVerificationError, ...)
+        # so a DNS failure, TLS error and timeout don't all look identical to the operator.
+        print(f"Could not fetch robots.txt ({type(e).__name__}): {e}")
         return 1
     return report(parse_robots(text))
 
