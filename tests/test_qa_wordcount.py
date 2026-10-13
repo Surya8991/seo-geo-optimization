@@ -39,10 +39,10 @@ def _html_with_links(n_internal):
 
 
 def test_link_band_uses_computed_not_inflated_forced_words(tmp_path):
-    # A short page (well under 2,000 reader words) allows at most 4 internal links,
+    # A short page (well under 1,000 reader words) allows at most 6 internal links,
     # regardless of any inflated --words a caller might pass.
     html = _html_with_links(6)
     computed = len(qa_check.reader_text(html).split())
-    assert computed < 2000
+    assert computed < 1000
     i_max, _ = qa_check.link_band(computed)
-    assert i_max == 4
+    assert i_max == 6
