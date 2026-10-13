@@ -41,10 +41,11 @@ class TestBritishSpellings:
 
 class TestLinkBand:
     def test_bands(self):
-        assert qa_check.link_band(1500) == (4, 3)
-        assert qa_check.link_band(3000) == (7, 4)
-        assert qa_check.link_band(5000) == (9, 5)
-        assert qa_check.link_band(9000) == (10, 6)
+        assert qa_check.link_band(500) == (6, 3)
+        assert qa_check.link_band(1500) == (12, 4)
+        assert qa_check.link_band(3000) == (15, 4)
+        assert qa_check.link_band(5000) == (20, 5)
+        assert qa_check.link_band(9000) == (25, 6)
 
 
 class TestFlesch:
