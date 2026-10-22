@@ -22,7 +22,7 @@ from `config.json`.
 
 ## Non-negotiables (same as always)
 - Quality over speed. One page at a time; wait for confirmation before the next.
-- ZERO em/en dashes and no double-hyphen breaks. American English. Stats 2024-2026 only.
+- ZERO em/en dashes and no double-hyphen breaks. American English. Stats from the last three years only (`MIN_STAT_YEAR`).
 - Brand named once, in the conclusion, only if natural.
 
 ---
@@ -36,7 +36,7 @@ on-page work earns a citation if they are blocked:
 ```bash
 python optimizer/check_bots.py
 ```
-If a retrieval bot (OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-Web) is BLOCKED, flag it
+If a retrieval bot (OAI-SearchBot, ChatGPT-User, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User) is BLOCKED, flag it
 to the user as a site-level fix; it is outside this page but gates all GEO results.
 
 ## Step 2 - Cannibalization clearance (do this before writing anything)
@@ -76,7 +76,7 @@ Start from `optimizer/template.html` but REMOVE the review-only blocks (the gree
 markers and the changes-summary), since this is clean output. Keep the publishing-fields box,
 the AIO answer-first opening paragraph (40-60 words), strict heading hierarchy, contextual
 internal links, `rel="nofollow" target="_blank"` external links only for a specific
-stat/study/quote, 2024-2026 stats, and the FAQ accordion with matching JSON-LD. Bake in
+stat/study/quote, stats from `MIN_STAT_YEAR` on, and the FAQ accordion with matching JSON-LD. Bake in
 `optimizer/MODERN-SEO-PLAYBOOK.md` (answer-first blocks, cited stats + one named-authority
 quote + one original element, self-contained passages, entity clarity, the schema set). Read
 for flow and readability as you write: short paragraphs, active voice, one idea per paragraph.

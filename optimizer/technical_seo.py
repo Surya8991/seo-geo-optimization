@@ -9,14 +9,17 @@ two common, easy-to-miss bugs need a live check instead. Network is injectable s
 the logic is testable.
 
 Usage:
-    python optimizer/technical_seo.py https://www.edstellar.com/blog/some-post
+    python optimizer/technical_seo.py https://www.example.com/blog/some-post
     python optimizer/technical_seo.py blog/some-post   # resolved against base_url
 """
 import sys
 import urllib.request
 from html.parser import HTMLParser
 
-from config_loader import CONFIG
+try:
+    from config_loader import CONFIG
+except ImportError:
+    from optimizer.config_loader import CONFIG
 
 BASE_URL = CONFIG["base_url"].rstrip("/") + "/"
 

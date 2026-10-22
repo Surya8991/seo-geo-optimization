@@ -14,7 +14,7 @@ descriptive filenames in `src`); the measurement happens on the live page.
 
 Now auto-checked by `qa_check.py`: **#25 Heading structure** (one H1, no skipped levels),
 **#26** image alt text/filenames, **#28** JSON-LD validity + Article-schema completeness,
-**#21** stale stats (pre-2024 years near a stat), **#50** freshness date, and **#5/#9**
+**#21** stale stats (years before `MIN_STAT_YEAR`, current year minus 2, near a stat), **#50** freshness date, and **#5/#9**
 primary-keyword placement (with `--keyword`). **#23/#24** meta uniqueness across pages: run
 `meta_audit.py`. Find the best targets with `striking.py` (position 8-20) and `next.py`.
 
@@ -44,9 +44,9 @@ primary-keyword placement (with `--keyword`). **#23/#24** meta uniqueness across
 17. **E-E-A-T: Expertise** - Author bio, credentials, "reviewed by" tag
 18. **E-E-A-T: Authority** - Links to research, .gov, .edu, industry reports
 19. **E-E-A-T: Trust** - Social proof, testimonials, transparent author info
-20. **Readability** - Flesch 60+, short paras, simple words, active voice
-21. **Outdated Content + Stats** - Replace stats older than 2 years, add 2025-2026 data
-22. **FAQ Section** - 5-8 FAQs from PAA, competitors, Quora/Reddit, GSC queries. FAQ schema
+20. **Readability** - Flesch 60+ (house style), short paras, simple words, active voice
+21. **Outdated Content + Stats** - Replace stats older than 2 years, add data from the current and previous year
+22. **FAQ Section** - 5-8 FAQs from PAA, competitors, Quora/Reddit, GSC queries. FAQPage schema for machine readability and answer extraction (FAQ rich results are limited to authoritative gov/health sites since Aug 2023)
 
 ## E. ON-PAGE SEO (6 points)
 23. **Title Tag** - Primary keyword + value + under 60 chars. Numbers, year, brackets
@@ -54,7 +54,7 @@ primary-keyword placement (with `--keyword`). **#23/#24** meta uniqueness across
 25. **Heading Structure** - H1 with keyword, H2s for subtopics/questions, H3s supporting. Logical
 26. **Image SEO** - Descriptive filenames, alt text with keywords, compressed/WebP, custom images
 27. **URL Structure** - Short, keyword-rich, no unnecessary words, lowercase, hyphens
-28. **Schema Markup** - Article, FAQ, HowTo, BreadcrumbList, Author schema
+28. **Schema Markup** - Article, FAQ, BreadcrumbList, Author schema; HowTo only for real step sequences (HowTo rich results were removed Sep 2023, so it documents structure only)
 
 ## F. LINKING STRATEGY (3 points)
 29. **Internal Links - Inbound** - Min 5 internal links FROM other pages TO this page (use `optimizer/interlink.py <slug>` to find candidate source pages)

@@ -23,7 +23,7 @@ table of contents, a key-terms `<dl>`, `HowTo` + `speakable` JSON-LD, and an aut
 crawl) and `optimizer/citations.py` (stat-provenance ledger); `technical_seo.py` extended with
 an hreflang audit; `qa_check.py` got an acronym-reuse INFO check, which caught a real issue on
 the live page (FAQ #3 reused "ROI" without a local definition - fixed); a live rendering audit
-against edstellar.com confirmed content is server-rendered (no JS-visibility risk to retrieval
+against the live site (example.com) confirmed content is server-rendered (no JS-visibility risk to retrieval
 bots); `MODERN-SEO-PLAYBOOK.md` strengthened with concrete next-steps for entity signals and
 off-site mention monitoring. 45 new tests added (222 total).
 
@@ -123,7 +123,7 @@ a single H2/H3 chunk, not the whole page. Each section needs to stand alone.
       quarterly site-level cadence (review).
 
 ## H. Technical/rendering GEO risk
-- [x] 20. Fetched the live `edstellar.com/blog/employee-training-best-practices` page's raw
+- [x] 20. Fetched the live `example.com/blog/employee-training-best-practices` page's raw
       server HTML directly (no JS execution) and confirmed the title, H1, H2s, and body text
       are all present in the initial response - not injected by client-side JS. No GEO
       visibility risk for retrieval bots found. One-off audit, not an automated check (site-wide

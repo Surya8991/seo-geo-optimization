@@ -80,9 +80,9 @@ def main(frag):
         print(f"ERROR: audit file not found: {AUDIT}")
         return 1
 
-    with open(SCORECARD, encoding="utf-8") as f:
+    with open(SCORECARD, encoding="utf-8-sig") as f:
         sc_data = json.load(f).get("pages", [])
-    with open(AUDIT, encoding="utf-8") as f:
+    with open(AUDIT, encoding="utf-8-sig") as f:
         au_data = json.load(f).get("audit_rows", [])
 
     sc_hits = find(sc_data, frag, ["url", "slug", "title"])

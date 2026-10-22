@@ -1,13 +1,13 @@
 {
-  "brand_name": "Edstellar",
-  "domain": "edstellar.com",
-  "base_url": "https://www.edstellar.com/",
+  "brand_name": "Acme",
+  "domain": "example.com",
+  "base_url": "https://www.example.com/",
   "info_path": "category",
   "blog_path": "blog",
-  "money_page_pattern": "https://www.edstellar.com/course/{course-slug}",
+  "money_page_pattern": "https://www.example.com/product/{slug}",
   "max_brand_mentions": 1,
 
-  "_note": "This is the ONLY place brand specifics live. Set brand_name, domain, base_url and the URL paths for your site, then every script and doc uses them. course_keyword_map drives money-page matching in build_scorecard.py; leave it empty to rely on title-word overlap only.",
+  "_note": "Copy this file to config.json (gitignored) and edit it there. config.json is the ONLY place brand specifics live. Set brand_name, domain, base_url and the URL paths for your site, then every script and doc uses them. money_page_pattern uses {slug} as the placeholder for the page-specific URL segment. course_keyword_map drives money-page matching in build_scorecard.py; leave it empty to rely on title-word overlap only.",
 
   "course_keyword_map": {},
 

@@ -13,7 +13,7 @@ one page being optimized:
 Network is injectable so the logic is testable.
 
 Usage:
-    python optimizer/sitecheck.py sitemap https://www.edstellar.com/sitemap.xml
+    python optimizer/sitecheck.py sitemap https://www.example.com/sitemap.xml
     python optimizer/sitecheck.py crawl
 """
 import gzip
@@ -44,7 +44,7 @@ def inventory_urls():
     money pages already carry a full url."""
     if not os.path.exists(AUDIT):
         return []
-    with open(AUDIT, encoding="utf-8") as f:
+    with open(AUDIT, encoding="utf-8-sig") as f:
         data = json.load(f)
     urls = []
     for mp in data.get("money_pages", []):

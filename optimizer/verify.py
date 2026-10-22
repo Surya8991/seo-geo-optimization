@@ -58,7 +58,7 @@ def build_cited(cited_csv, not_cited_csv):
 
 def load():
     if os.path.exists(LOG):
-        with open(LOG, encoding="utf-8") as f:
+        with open(LOG, encoding="utf-8-sig") as f:
             data = json.load(f)
     else:
         data = {}
@@ -261,8 +261,8 @@ if __name__ == "__main__":
     a.add_argument("--pos-delta", dest="pos_delta", default="", help="e.g. -3 (avg position change)")
     a.add_argument("--note", default="")
 
-    l = sub.add_parser("list")
-    l.add_argument("slug", nargs="?", default=None)
+    lst = sub.add_parser("list")
+    lst.add_argument("slug", nargs="?", default=None)
 
     sub.add_parser("report")
 

@@ -9,11 +9,19 @@ self-contained HTML file with color-coded review markers (green = add, red = rem
 for review before publishing.
 
 Nothing brand-specific is hard-coded. Set your brand, domain, and URL paths once in
-**`config.json`** and the whole system points at your site.
+**`config.json`** and the whole system points at your site. `config.json` is gitignored; start
+from the committed template:
+
+```bash
+cp config.example.json config.json   # then edit brand_name, domain, base_url, paths
+```
+
+Until you copy it, the scripts fall back to `config.example.json` (example.com / "Acme") and
+print a reminder.
 
 ## Start here
 - **`docs/guide.html`** - a self-contained HTML operator guide (open in a browser): setup, both tracks, every helper, and the QA gate.
-- **`config.json`** - set brand, domain, URL paths, money-page keyword map, and geo-slug list.
+- **`config.json`** (copied from `config.example.json`) - set brand, domain, URL paths, money-page keyword map, and geo-slug list.
 - **`AGENTS.md`** - full context: the 12 quality rules, the 8-lever framework, the 8-step pipeline. Source of truth (`CLAUDE.md` just imports it).
 - **`WORKFLOW.md`** - the per-page runbook.
 - **`.claude/commands/optimize-page.md`** - the runbook as a slash command (`/optimize-page <slug>`).
@@ -59,6 +67,26 @@ python optimizer/verify.py add <slug> --keyword "K" --cited chatgpt,perplexity  
 python optimizer/verify.py report        # roll up citation rates + CTR/position deltas
 ```
 
+### `seo-geo` command (optional)
+
+Install the repo in editable mode to get a single `seo-geo` command that dispatches to the
+same scripts (arguments pass straight through, so every command above still works as-is):
+
+```bash
+pip install -e .                       # from the repo root; keeps data/ and config.json local
+seo-geo --help                         # list subcommands
+seo-geo qa "final output/<slug>-green.html" --words <n>
+seo-geo qa "final output/<slug>-green.html" --json     # machine-readable QA results
+seo-geo lookup <slug>
+seo-geo check-bots
+seo-geo build-scorecard --inventory page-inventory.xlsx --gsc-dir gsc
+```
+
+Subcommands: `qa`, `lookup`, `cannibal`, `ledger`, `next`, `striking`, `interlink`,
+`check-bots`, `meta-audit`, `linkcheck`, `technical-seo`, `sitecheck`, `citations`, `verify`,
+`llms-txt`, `pricing`, `build-scorecard` (the script names, e.g. `qa_check`, work too).
+`python optimizer/qa_check.py ... --json` gives the same JSON without installing.
+
 No GSC exports yet? Copy the committed sample data and the tooling runs immediately:
 
 ```bash
@@ -72,13 +100,15 @@ Build the real data from raw GSC + inventory exports (only when the source files
 ```bash
 pip install -r requirements.txt
 python build_scorecard.py    # regenerates data/scorecard.json + data/audit.json
+python build_scorecard.py --help   # --inventory / --gsc-dir / --aggregate / --out-dir overrides
 ```
 
-Run the test suite (covers the QA gate, scoring, ledger, and cannibalization logic):
+Run the lint and test suite (covers the QA gate, scoring, ledger, and cannibalization logic):
 
 ```bash
-pip install -r requirements.txt
-pytest
+pip install -r requirements-dev.txt
+ruff check .
+pytest                       # or: pytest --cov --cov-report=term
 ```
 
 The input contract (which workbook, sheets, and columns `build_scorecard.py` expects) is
@@ -87,7 +117,8 @@ documented at the top of that file. Adjust the constants to match your own expor
 ## Structure
 ```
 SEO & GEO Optimization/
-├── config.json                   Brand config (the ONE place brand lives)
+├── config.example.json           Brand config template (copy to config.json, which is gitignored)
+├── pyproject.toml                Package metadata, `seo-geo` console script, ruff + pytest config
 ├── AGENTS.md                     Project context + rules (authoritative)
 ├── CLAUDE.md                     One-line import of AGENTS.md
 ├── README.md                     This file
@@ -101,6 +132,7 @@ SEO & GEO Optimization/
 │   ├── QUALITY-RULES.md             QA pass criteria + link/FAQ bands
 │   ├── MODERN-SEO-PLAYBOOK.md        SEO + AEO + GEO + LLM best practices
 │   ├── template.html                 Blank output skeleton (CSS + FAQ JS + JSON-LD + changes-summary)
+│   ├── cli.py                        `seo-geo` dispatcher (runs the scripts below)
 │   ├── config_loader.py              Shared config reader
 │   ├── constants.py                  Shared stop words + rule thresholds
 │   ├── jsonstore.py                   Tiny file lock so ledger.py/verify.py add() can't race
@@ -120,11 +152,12 @@ SEO & GEO Optimization/
 │   ├── llms_txt.py                   /llms.txt generator (agent/MCP; not a citation lever)
 │   ├── pricing.py                    /pricing.md skeleton generator (fill in real figures by hand)
 │   ├── verify.py                     Step 9 post-publish verification log (+ report rollup)
-│   └── qa_check.py                   QA gate (--new/--keyword; headings, images, JSON-LD, freshness, stats)
+│   └── qa_check.py                   QA gate (--new/--keyword/--json; headings, images, JSON-LD, freshness, stats)
 ├── docs/guide.html               Self-contained HTML operator guide (open in a browser)
-├── .github/workflows/ci.yml      CI: pytest + byte-compile on push/PR
-├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, striking, interlink, check_bots, verify, meta_audit, llms_txt, linkcheck, lookup, jsonstore, config_loader, technical_seo, sitecheck, citations, pricing)
+├── .github/workflows/ci.yml      CI: ruff + pytest/coverage (Py 3.11, 3.12) + byte-compile on push/PR
+├── tests/                        pytest suite (qa_check, scoring, ledger, cannibal, next, striking, interlink, check_bots, verify, meta_audit, llms_txt, linkcheck, lookup, jsonstore, config_loader, technical_seo, sitecheck, citations, pricing, build_scorecard, cli)
 ├── requirements.txt              openpyxl (runtime) + pytest (dev)
+├── requirements-dev.txt          + pytest-cov, ruff
 ├── data/                         scorecard.json, audit.json, content_ledger.json (gitignored)
 │   └── *.example.json            Committed sample data so the tooling runs before real exports
 └── final output/                 Optimized pages ({slug}-green.html) and new pages ({slug}.html)
@@ -142,6 +175,7 @@ SEO & GEO Optimization/
 ## Rules that never bend
 Zero em/en dashes. Keyword not stuffed (max 5-6 primary placements). Link budget by word
 count, max 1 link per paragraph. No CTA anchor text. No country/city page links. Brand named
-once, in the conclusion. Cannibalization checked before any new H2. American English. Stats
-2024-2026 only. FAQ HTML must match its JSON-LD. See `optimizer/QUALITY-RULES.md` for the
+once, in the conclusion. Cannibalization checked before any new H2. American English (house
+style). Stats from the last three years only (`MIN_STAT_YEAR`, current year minus 2). FAQ HTML
+must match its JSON-LD. See `optimizer/QUALITY-RULES.md` for the
 full gate, enforced by `qa_check.py`.

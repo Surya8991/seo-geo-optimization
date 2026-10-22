@@ -78,9 +78,8 @@
      This serves as the AIO/featured-snippet target. No special card or styling -
      it reads as natural content but is structured to be pulled by Google.
      Follow with 2-3 sentences expanding the context before the first H2.
-     class="aio-answer" marks it as a speakable/extraction target (see the
-     Article JSON-LD's "speakable" block below) - keep the class even though it
-     carries no visual styling.
+     class="aio-answer" marks it as the answer-extraction target - keep the class
+     even though it carries no visual styling.
 -->
 <p class="aio-answer">{{40-60 word answer-first definition of the topic, containing primary keyword. This is the paragraph Google pulls for AI Overview and featured snippets. Write it as natural prose, not a card.}}</p>
 
@@ -158,7 +157,7 @@
   <tr><td>Secondary + longtail keywords</td><td>Added</td><td>{{list the secondary/longtail terms placed and where}}</td></tr>
   <tr><td>Internal links</td><td>Added</td><td>{{destination + anchor text for each, all contextually relevant, no CTA anchors, no geo pages}}</td></tr>
   <tr><td>External links</td><td>Added</td><td>{{sources cited, each on a specific stat/study/quote}}</td></tr>
-  <tr><td>Stats refreshed</td><td>Updated</td><td>{{old stat -> 2024-2026 equivalent}}</td></tr>
+  <tr><td>Stats refreshed</td><td>Updated</td><td>{{old stat -> recent (MIN_STAT_YEAR+) equivalent}}</td></tr>
   <tr><td>FAQ</td><td>Added</td><td>{{count, PAA-sourced}}</td></tr>
   <tr><td>AI Overview target</td><td>-</td><td>{{who currently ranks in the AI Overview for this keyword + the angle chosen to earn a citation}}</td></tr>
   <tr><td>Ledger</td><td>-</td><td>{{new sections recorded via ledger.py so future pages do not repeat them}}</td></tr>
@@ -186,8 +185,8 @@
      a current-year dateModified is what satisfies the freshness gate. Keep these live.
      author.jobTitle or author.description is an E-E-A-T signal (qa_check.py flags a bare
      name-only Person node as an INFO note - not a hard requirement, but worth filling in).
-     "speakable" points voice/AI assistants at the extraction targets: the H1 and the
-     opening aio-answer paragraph, at minimum. -->
+     No "speakable" here: Google's speakable is a beta for news publishers only. Add it
+     only on a news article, pointing at the H1 and the .aio-answer paragraph. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -197,8 +196,7 @@
   "dateModified": "{{YYYY-MM-DD, current-year update date}}",
   "author": { "@type": "Person", "name": "{{author}}", "jobTitle": "{{author's role/title}}", "sameAs": "{{author profile URL}}" },
   "publisher": { "@type": "Organization", "name": "{{BRAND}}" },
-  "mainEntityOfPage": "{{canonical page URL}}",
-  "speakable": { "@type": "SpeakableSpecification", "cssSelector": ["h1", ".aio-answer"] }
+  "mainEntityOfPage": "{{canonical page URL}}"
 }
 </script>
 <script type="application/ld+json">
@@ -212,7 +210,8 @@
   ]
 }
 </script>
-<!-- Add HowTo only for a real step/numbered-practice sequence. qa_check.py checks a
+<!-- Optional HowTo, only for a real step/numbered-practice sequence. Google removed HowTo
+     rich results in Sep 2023, so this documents structure for parsers only. qa_check.py checks a
      present HowTo has a name and that every step has BOTH name and text - an empty
      step list or a step missing text is worse than no HowTo block at all:
 <script type="application/ld+json">
@@ -222,8 +221,9 @@
 </script>
 -->
 
-<!-- ===== FAQ JSON-LD - Google-preferred schema. Every Question/answer here MUST match a
-     visible accordion item above word for word. qa_check.py enforces the count parity. ===== -->
+<!-- ===== FAQ JSON-LD - for machine readability / answer extraction (FAQ rich results are
+     limited to authoritative gov/health sites since Aug 2023). Every Question/answer here MUST
+     match a visible accordion item above word for word. qa_check.py enforces the count parity. ===== -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
