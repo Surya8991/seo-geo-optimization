@@ -84,8 +84,32 @@ seo-geo build-scorecard --inventory page-inventory.xlsx --gsc-dir gsc
 
 Subcommands: `qa`, `lookup`, `cannibal`, `ledger`, `next`, `striking`, `interlink`,
 `check-bots`, `meta-audit`, `linkcheck`, `technical-seo`, `sitecheck`, `citations`, `verify`,
-`llms-txt`, `pricing`, `build-scorecard` (the script names, e.g. `qa_check`, work too).
+`llms-txt`, `pricing`, `serve`, `build-scorecard` (the script names, e.g. `qa_check`, work too).
 `python optimizer/qa_check.py ... --json` gives the same JSON without installing.
+
+### QA as an HTTP service (optional)
+
+`seo-geo serve` exposes the QA gate over HTTP so another app can score a page without
+shelling out (standard library only, no extra dependencies):
+
+```bash
+seo-geo serve                              # http://127.0.0.1:8765 (or: python optimizer/service.py)
+seo-geo serve --host 0.0.0.0 --port 9000   # set SEO_GEO_SERVICE_TOKEN before binding beyond localhost
+
+curl http://127.0.0.1:8765/health
+curl -X POST http://127.0.0.1:8765/qa -H "Content-Type: application/json"      -d '{"html": "<h1>...</h1>", "keyword": "product certification", "mode": "new"}'
+curl -X POST http://127.0.0.1:8765/qa -H "Content-Type: application/json"      -d '{"url": "https://www.example.com/blog/some-page/", "mode": "new"}'
+```
+
+- `POST /qa` takes `{html}` or `{url}` plus optional `keyword`, `mode` (`optimize` default, or
+  `new` for a clean live page), `words` and `live` (default true for `{url}`: read the meta
+  title/description from the page's `<title>` / `<meta name="description">` instead of the
+  review-copy publishing box), and returns exactly what `qa_check.py --json` prints.
+- Set `SEO_GEO_SERVICE_TOKEN` to require `Authorization: Bearer <token>` on `/qa`.
+- Bodies are capped at 2 MB. `{url}` fetches are http(s) only, 10 s / 3 MB capped, and refuse
+  hosts that resolve to private, loopback, link-local or reserved addresses. Input is only ever
+  parsed as HTML; nothing is executed or written to disk.
+- Brand settings come from `config.json`, falling back to `config.example.json`.
 
 No GSC exports yet? Copy the committed sample data and the tooling runs immediately:
 
@@ -133,6 +157,7 @@ SEO & GEO Optimization/
 │   ├── MODERN-SEO-PLAYBOOK.md        SEO + AEO + GEO + LLM best practices
 │   ├── template.html                 Blank output skeleton (CSS + FAQ JS + JSON-LD + changes-summary)
 │   ├── cli.py                        `seo-geo` dispatcher (runs the scripts below)
+│   ├── service.py                    `seo-geo serve`: QA gate over HTTP (GET /health, POST /qa)
 │   ├── config_loader.py              Shared config reader
 │   ├── constants.py                  Shared stop words + rule thresholds
 │   ├── jsonstore.py                   Tiny file lock so ledger.py/verify.py add() can't race

@@ -6,6 +6,7 @@ existing standalone script, with the remaining arguments passed through untouche
     seo-geo qa "final output/page-green.html" --words 3200 --json
     seo-geo lookup product-certification
     seo-geo check-bots https://www.example.com
+    seo-geo serve --port 8765
 
 Each subcommand runs exactly as `python optimizer/<script>.py ...` would (same
 argv, same __main__ block), so the documented script commands keep working and
@@ -37,6 +38,7 @@ COMMANDS = {
     "verify": ("optimizer/verify.py", "post-publish verification log + report"),
     "llms-txt": ("optimizer/llms_txt.py", "generate /llms.txt from the inventory"),
     "pricing": ("optimizer/pricing.py", "generate a /pricing.md skeleton"),
+    "serve": ("optimizer/service.py", "HTTP service for the QA gate (GET /health, POST /qa)"),
     "build-scorecard": ("build_scorecard.py", "build data/*.json from GSC + inventory exports"),
 }
 

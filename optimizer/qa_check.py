@@ -676,6 +676,33 @@ def evaluate(path, forced_words=None, is_new=False, keyword=None):
     # utf-8-sig: a BOM from a Windows editor would otherwise sit in front of <!DOCTYPE>.
     with open(path, encoding="utf-8-sig") as f:
         html = f.read()
+    return evaluate_html(html, forced_words, is_new, keyword, path=str(path))
+
+
+def live_head_title(html):
+    """Text of the page's <title> (a LIVE page has no publishing-fields box), or None."""
+    m = re.search(r"<title[^>]*>([\s\S]*?)</title>", html, re.I)
+    if not m:
+        return None
+    return html_lib.unescape(strip_tags(m.group(1))).strip() or None
+
+
+def live_meta_description(html):
+    """content= of <meta name="description"> (either attribute order), or None."""
+    for tag in re.findall(r"<meta\b[^>]*>", html, re.I):
+        if re.search(r"""name\s*=\s*["']?description["']?""", tag, re.I):
+            c = re.search(r"""content\s*=\s*(?:"([^"]*)"|'([^']*)')""", tag, re.I)
+            if c:
+                return html_lib.unescape(c.group(1) if c.group(1) is not None else c.group(2)).strip() or None
+    return None
+
+
+def evaluate_html(html, forced_words=None, is_new=False, keyword=None, path="<input>", live=False):
+    """evaluate() on an HTML string already in memory (the HTTP service uses this, so
+    nothing from a request is ever written to disk). `path` is only echoed back.
+    live=True: the HTML is a published page, so the meta title/description checks fall
+    back to its <title> and <meta name="description"> when there is no publishing-fields box."""
+    html = html.lstrip("\ufeff")
 
     results = []   # (ok, label, detail)
     warnings = []  # (label, detail) advisory: worth a look, never fails the gate
@@ -734,22 +761,28 @@ def evaluate(path, forced_words=None, is_new=False, keyword=None):
 
     # 9. Meta title length
     mt = re.search(r"Meta title\s*\((\d+)\s*/\s*\d+\)\s*:</strong>\s*([^<]+)", html)
-    if mt:
-        # Measure what the SERP shows: &amp; is one character, not five.
-        title_txt = html_lib.unescape(mt.group(2)).strip()
-        check(len(title_txt) <= META_TITLE_MAX, f"Meta title <= {META_TITLE_MAX} chars",
-              f"{len(title_txt)} chars: {title_txt}")
+    # Measure what the SERP shows: &amp; is one character, not five.
+    page_title = html_lib.unescape(mt.group(2)).strip() if mt else None
+    if page_title is None and live:
+        page_title = live_head_title(html)
+    if page_title is not None:
+        check(len(page_title) <= META_TITLE_MAX, f"Meta title <= {META_TITLE_MAX} chars",
+              f"{len(page_title)} chars: {page_title}")
     else:
-        check(False, "Meta title field present", "not found in publishing-fields box")
+        check(False, "Meta title field present",
+              "no <title> tag" if live else "not found in publishing-fields box")
 
     # 10. Meta description length
     md = re.search(r"Meta description\s*\((\d+)\s*/\s*\d+\)\s*:</strong>\s*([^<]+)", html)
-    if md:
-        desc = html_lib.unescape(md.group(2)).strip()
+    desc = html_lib.unescape(md.group(2)).strip() if md else None
+    if desc is None and live:
+        desc = live_meta_description(html)
+    if desc is not None:
         check(META_DESC_MIN <= len(desc) <= META_DESC_MAX,
               f"Meta description {META_DESC_MIN}-{META_DESC_MAX} chars", f"{len(desc)} chars")
     else:
-        check(False, "Meta description field present", "not found in publishing-fields box")
+        check(False, "Meta description field present",
+              "no <meta name=\"description\">" if live else "not found in publishing-fields box")
 
     # 11. H1 present
     h1 = re.search(r"<h1[^>]*>([\s\S]*?)</h1>", html, re.I)
@@ -821,8 +854,7 @@ def evaluate(path, forced_words=None, is_new=False, keyword=None):
     # 15e. Primary-keyword placement (only when --keyword is supplied; Rule 2)
     if keyword:
         h1_text = strip_tags(h1.group(1)).strip() if h1 else ""
-        title_txt = mt.group(2).strip() if mt else ""
-        kp = keyword_placement(html, text, h1_text, title_txt, keyword)
+        kp = keyword_placement(html, text, h1_text, page_title or "", keyword)
         check(kp["in_h1"], f'Primary keyword "{keyword}" in H1')
         check(kp["in_first_100"], 'Primary keyword in first 100 words')
         check(1 <= kp["count"] <= 6, "Primary keyword not stuffed (1-6 uses)", f'{kp["count"]} uses')
@@ -906,7 +938,7 @@ def evaluate(path, forced_words=None, is_new=False, keyword=None):
         info.append(("Acronym reused without local redefinition", detail))
 
     return {
-        "path": str(path),
+        "path": path,
         "mode": "new" if is_new else "optimize",
         "brand": BRAND,
         "domain": DOMAIN,
