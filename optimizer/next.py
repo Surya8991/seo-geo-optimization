@@ -7,6 +7,10 @@ A page counts as DONE when a matching file exists in `final output/` (either
 `<slug-tail>-green.html` or `<slug-tail>.html`) or its slug appears in the content
 ledger. Everything else is pending, sorted by priority_score (highest first).
 
+After the pending list it also prints the rest of the lifecycle, so nothing is left to
+memory: pages built but with no publish date recorded, and published pages whose ~30-day
+verification pass (WORKFLOW Step 9) is due or overdue.
+
 Usage:
     python optimizer/next.py            # top 10 pending pages
     python optimizer/next.py 25         # top 25
@@ -15,10 +19,13 @@ import json
 import os
 import re
 import sys
+from datetime import date
 
 try:
+    import verify
     from constants import small_inventory_warning
 except ImportError:
+    from optimizer import verify
     from optimizer.constants import small_inventory_warning
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -53,6 +60,18 @@ def pending_pages(pages, done):
     return sorted(out, key=lambda p: p.get("priority_score", 0), reverse=True)
 
 
+def built_slugs(final_files):
+    """Slug tails of pages with a file in `final output/` (ledger entries excluded)."""
+    return {re.sub(r"(-green)?\.html$", "", n, flags=re.I).lower()
+            for n in final_files if n.lower().endswith(".html")}
+
+
+def unpublished(final_files, published):
+    """Built pages with no recorded publish date, sorted."""
+    pub = {verify._tail(p["page_slug"]) for p in published}
+    return sorted(built_slugs(final_files) - pub)
+
+
 def _load_json(path, default):
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
@@ -83,6 +102,19 @@ def main(n):
         if title:
             print(f'        "{title}"  (clicks16m={p.get("clicks_16m","?")}, pos={p.get("position","?")})')
     print()
+
+    log = verify.load()
+    waiting = unpublished(final_files, log["published"])
+    if waiting:
+        print("Built, no publish date recorded (run `verify.py publish <slug>` once live):")
+        for slug in waiting:
+            print(f"  {slug}")
+        print()
+    queue = verify.due_items(log["published"], log["entries"], date.today())
+    if queue:
+        print("Post-publish verification (WORKFLOW Step 9):")
+        verify.print_due(queue)
+        print()
     return 0
 
 

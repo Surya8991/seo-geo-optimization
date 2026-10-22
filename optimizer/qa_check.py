@@ -20,7 +20,9 @@ Exit code 0 = all hard checks pass. Exit code 1 = at least one FAIL.
 import sys
 import re
 import json
+import html as html_lib
 import argparse
+from urllib.parse import urlparse
 
 from config_loader import CONFIG
 from constants import (
@@ -103,10 +105,56 @@ else:
 
 # ---- helpers ---------------------------------------------------------------
 
+def _host_is_site(host):
+    host = (host or "").lower()
+    return host == DOMAIN or host.endswith("." + DOMAIN)
+
+
+def is_internal_href(href):
+    """True for a root-relative path or an absolute URL whose HOST is the site.
+
+    A substring test on the domain is wrong: google.com/search?q=example.com is not internal."""
+    href = href.strip()
+    if href.startswith("//"):
+        return _host_is_site(urlparse("http:" + href).hostname)
+    if href.startswith("/"):
+        return True
+    return href.lower().startswith(("http://", "https://")) and _host_is_site(urlparse(href).hostname)
+
+
+def is_external_href(href):
+    href = href.strip()
+    if href.lower().startswith(("http://", "https://")) or href.startswith("//"):
+        return not is_internal_href(href)
+    return False
+
+
+def country_slug_in_href(href):
+    """The country slug if this INTERNAL href points at a geo page (first path segment)."""
+    if not COUNTRY_SLUGS or not is_internal_href(href):
+        return None
+    seg = urlparse(href.strip()).path.strip("/").split("/")[0].lower()
+    return seg if seg in COUNTRY_SLUGS else None
+
+
+def visible_dash_text(html):
+    """Text for the double-hyphen check: no comments (their --> closer), styles (CSS --vars) or tags."""
+    html = re.sub(r"<!--[\s\S]*?-->|<style[\s\S]*?</style>|<[^>]+>", " ", html, flags=re.I)
+    return html_lib.unescape(html)
+
+
 def strip_tags(html):
     html = re.sub(r"<script[\s\S]*?</script>", " ", html, flags=re.I)
     html = re.sub(r"<style[\s\S]*?</style>", " ", html, flags=re.I)
     return re.sub(r"<[^>]+>", " ", html)
+
+# A <div> whose class list contains "note" (review/publishing boxes, possibly with extra
+# classes, either quote style) or "remove-block" (red removal blocks, not reader-facing).
+_REVIEW_DIV_RE = re.compile(
+    r"""<div\b[^>]*\bclass\s*=\s*(["'])[^"']*(?<![\w-])(?:note|remove-block)(?![\w-])[^"']*\1""", re.I)
+_TAG_SPAN_RE = re.compile(
+    r"""<span\b[^>]*\bclass\s*=\s*(["'])[^"']*(?<![\w-])(?:new-tag|remove-tag)(?![\w-])[^"']*\1[^>]*>[\s\S]*?</span>""", re.I)
+
 
 def strip_note_blocks(html):
     """Remove every <div class="note" ...>...</div> block, honoring nested <div>s.
@@ -117,13 +165,13 @@ def strip_note_blocks(html):
     This walks div open/close depth to remove the whole block.
     """
     tag = re.compile(r'<(/?)div\b', re.I)
-    start = re.compile(r'<div class="note"', re.I)
+    start = _REVIEW_DIV_RE
     out, i = [], 0
     while True:
         m = start.search(html, i)
         if not m:
             out.append(html[i:])
-            return "".join(out)
+            return _TAG_SPAN_RE.sub(" ", "".join(out))
         out.append(html[i:m.start()])
         depth, end = 0, len(html)
         for tm in tag.finditer(html, m.start()):
@@ -354,7 +402,7 @@ def keyword_placement(html, text, h1_text, meta_title, keyword):
     kw = keyword.lower().strip()
     tl = text.lower()
     first100 = " ".join(text.split()[:100]).lower()
-    concl_m = re.search(r"<h2[^>]*>\s*conclusion[\s\S]*", html, re.I)
+    concl_m = re.search(r"<h2[^>]*>\s*conclusion[\s\S]*?(?=<h2[\s>]|$)", html, re.I)
     concl_text = strip_tags(concl_m.group(0)).lower() if concl_m else None
     return {
         "in_title": kw in (meta_title or "").lower(),
@@ -500,9 +548,11 @@ def run(path, forced_words=None, is_new=False, keyword=None):
                          f"link band uses computed. Recheck the passed count."))
 
     # 1-3. Dashes
-    em = html.count("—")
-    en = html.count("–")
-    dbl = len(re.findall(r"(?<=\w)--(?=\s)|(?<=\s)--(?=\w)", html))
+    dash_src = html_lib.unescape(html) + re.sub(
+        r"\\u(2014|2013)", lambda m: chr(int(m.group(1), 16)), html, flags=re.I)
+    em = dash_src.count("—")
+    en = dash_src.count("–")
+    dbl = len(re.findall(r"(?<!-)--(?!-)", visible_dash_text(html)))
     check(em == 0, "Em dashes = 0", f"found {em}")
     check(en == 0, "En dashes = 0", f"found {en}")
     check(dbl == 0, "Double-hyphen breaks = 0", f"found {dbl}")
@@ -514,16 +564,16 @@ def run(path, forced_words=None, is_new=False, keyword=None):
 
     # 5. Links + budget
     reader_html = strip_note_blocks(html)
-    reader_hrefs = re.findall(r'<a\s[^>]*href="([^"]+)"[^>]*>', reader_html, re.I)
-    internal = [h for h in reader_hrefs if DOMAIN in h.lower() or h.startswith("/")]
-    external = [h for h in reader_hrefs if h.startswith("http") and DOMAIN not in h.lower()]
+    reader_hrefs = [m[1] for m in re.findall(r"""<a\s[^>]*href\s*=\s*(["'])([^"']+)\1[^>]*>""", reader_html, re.I)]
+    internal = [h for h in reader_hrefs if is_internal_href(h)]
+    external = [h for h in reader_hrefs if is_external_href(h)]
     i_max, e_max = link_band(words)
     check(len(internal) <= i_max, f"Internal links <= {i_max} (~{words} words)", f"found {len(internal)}")
     check(len(external) <= e_max, f"External hyperlinks <= {e_max}", f"found {len(external)}")
 
     # 6. Max 1 link per <p>
     over = 0
-    for p in re.findall(r"<p[\s>][\s\S]*?</p>", html, re.I):
+    for p in re.findall(r"<p[\s>][\s\S]*?</p>", reader_html, re.I):
         if len(re.findall(r"<a\s", p, re.I)) > 1:
             over += 1
     check(over == 0, "Max 1 link per paragraph", f"{over} paragraphs over")
@@ -560,10 +610,12 @@ def run(path, forced_words=None, is_new=False, keyword=None):
     check(bool(h1), "H1 present", strip_tags(h1.group(1)).strip() if h1 else "missing")
 
     # 12. AIO opening paragraph
-    h1_match = re.search(r"</h1>\s*(?:<[^p][^>]*>[\s\S]*?)*<p[^>]*>([\s\S]*?)</p>", html, re.I)
+    h1_end = re.search(r"</h1>", html, re.I)
+    h1_match = re.compile(r"<p(?:\s[^>]*)?>([\s\S]*?)</p>", re.I).search(html, h1_end.end()) if h1_end else None
     if h1_match:
         first_p = strip_tags(h1_match.group(1)).strip()
-        check(len(first_p.split()) >= 30, "AIO opening paragraph (30+ words)", f"{len(first_p.split())} words")
+        check(30 <= len(first_p.split()) <= 80, "AIO opening paragraph (30-80 words; target 40-60)",
+              f"{len(first_p.split())} words")
     else:
         check(False, "AIO opening paragraph present", "no <p> found after <h1>")
 
@@ -582,8 +634,11 @@ def run(path, forced_words=None, is_new=False, keyword=None):
               'add a table with class="changes-summary" listing section / action / reason')
 
     # 14. External links have rel=nofollow + target=_blank
-    ext_tags = [t for t in re.findall(r"<a\s[^>]*>", reader_html, re.I)
-                if re.search(r'href="https?://', t) and DOMAIN not in t.lower()]
+    ext_tags = []
+    for t in re.findall(r"<a\s[^>]*>", reader_html, re.I):
+        hm = re.search(r"""href\s*=\s*(["'])([^"']+)\1""", t, re.I)
+        if hm and is_external_href(hm.group(2)):
+            ext_tags.append(t)
     bad_ext = [t for t in ext_tags if "nofollow" not in t.lower() or "_blank" not in t.lower()]
     check(not bad_ext, "External links rel=nofollow target=_blank", f"{len(bad_ext)} missing attrs")
 
@@ -656,11 +711,10 @@ def run(path, forced_words=None, is_new=False, keyword=None):
 
     # 17. No country/city page links
     geo_links = []
-    if _COUNTRY_PATTERN:
-        for href in reader_hrefs:
-            m = _COUNTRY_PATTERN.search(href)
-            if m:
-                geo_links.append(f"{m.group(1)}: {href}")
+    for href in reader_hrefs:
+        slug = country_slug_in_href(href)
+        if slug:
+            geo_links.append(f"{slug}: {href}")
     check(not geo_links, "No country/city page links", "; ".join(geo_links[:5]) if geo_links else "")
 
     # Informational: readability (manual judgment, not a hard gate)

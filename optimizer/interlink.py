@@ -72,6 +72,9 @@ def resolve_target_tokens(target, pages, audit_rows):
     """Tokens for the target: title + primary_keyword if the target is a known page,
     otherwise just the raw phrase. Returns (tokens, exclude_tail, label)."""
     frag = target.lower().strip().rstrip("/")
+    # An exact slug match beats the first substring hit ('info/agile' vs 'info/agile-scrum').
+    audit_rows = sorted(audit_rows, key=lambda r: slug_tail(r.get("slug") or r.get("url", "")) != slug_tail(frag))
+    pages = sorted(pages, key=lambda r: slug_tail(r.get("slug") or r.get("url", "")) != slug_tail(frag))
     for r in audit_rows:
         hay = " ".join(str(r.get(k, "")) for k in ("url", "slug", "title")).lower()
         if frag in hay:

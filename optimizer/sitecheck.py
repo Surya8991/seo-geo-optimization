@@ -16,11 +16,13 @@ Usage:
     python optimizer/sitecheck.py sitemap https://www.example.com/sitemap.xml
     python optimizer/sitecheck.py crawl
 """
+import gzip
 import json
 import os
 import re
 import sys
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     from config_loader import CONFIG
@@ -42,7 +44,8 @@ def inventory_urls():
     money pages already carry a full url."""
     if not os.path.exists(AUDIT):
         return []
-    data = json.load(open(AUDIT, encoding="utf-8"))
+    with open(AUDIT, encoding="utf-8") as f:
+        data = json.load(f)
     urls = []
     for mp in data.get("money_pages", []):
         u = (mp or {}).get("url", "").strip()
@@ -64,7 +67,10 @@ def inventory_urls():
 def fetch(url, timeout=15):
     req = urllib.request.Request(url, headers={"User-Agent": "seo-geo-sitecheck/1.0"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read().decode("utf-8", "replace")
+        raw = r.read()
+    if raw[:2] == b"\x1f\x8b":   # .xml.gz sitemaps arrive gzip-compressed
+        raw = gzip.decompress(raw)
+    return raw.decode("utf-8", "replace")
 
 
 def parse_sitemap(xml_text):
@@ -101,11 +107,13 @@ def crawl(urls, fetcher=fetch_status):
     """Fetch every URL and classify it 'ok'/'redirect'/'broken' - the same rules
     linkcheck.py uses for links inside one page, applied across the whole site
     inventory instead. Returns [(url, verdict, final_url, error), ...]."""
-    out = []
-    for url in urls:
+    def one(url):
         status, final_url, error = fetcher(url)
-        out.append((url, classify(url, status, final_url, error), final_url, error))
-    return out
+        return (url, classify(url, status, final_url, error), final_url, error)
+
+    # Network-bound, so fetch concurrently; map() keeps the inventory order.
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        return list(pool.map(one, urls))
 
 
 def run_sitemap(sitemap_url, fetcher=fetch):
@@ -130,7 +138,9 @@ def run_sitemap(sitemap_url, fetcher=fetch):
             print(f"  - {u}")
     if not missing and not orphaned:
         print("Inventory and sitemap match.")
-    return 1 if (missing or orphaned) else 0
+    # Only inventory pages absent from the sitemap fail the run. Sitemap-only URLs are
+    # listed for review but are normal on a real site (pages not in the inventory).
+    return 1 if missing else 0
 
 
 def run_crawl(fetcher=fetch_status):

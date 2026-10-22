@@ -212,7 +212,9 @@ def find_gsc_url(slug_tail):
 entries = []
 matched = 0
 for p in pages:
-    slug_tail = p["slug"].replace(f"{INFO_PATH}/", "").strip("/")
+    slug_tail = p["slug"].strip("/")
+    if slug_tail.startswith(f"{INFO_PATH}/"):   # prefix only; .replace() would also hit mid-slug text
+        slug_tail = slug_tail[len(INFO_PATH) + 1:]
     gsc_url = find_gsc_url(slug_tail)
     if gsc_url:
         matched += 1

@@ -5,6 +5,12 @@ record whether it earned AI citations and how GSC moved, so the pipeline learns
 which levers actually worked instead of optimizing blind.
 
 Usage:
+    # once the page is live, record the publish date (starts the 30-day clock)
+    python optimizer/verify.py publish info/product-certification [--date 2026-10-22]
+
+    # which published pages are due (or overdue) for verification
+    python optimizer/verify.py due [--days 30]
+
     # record a verification pass for a page
     python optimizer/verify.py add info/product-certification \
         --keyword "product certification" \
@@ -22,7 +28,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 try:
     from jsonstore import locked
@@ -32,6 +38,7 @@ except ImportError:
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG = os.path.join(BASE, "data", "verification_log.json")
 
+VERIFY_AFTER_DAYS = 30
 ENGINES = ["chatgpt", "perplexity", "gemini", "claude", "google-ai-overview"]
 
 
@@ -52,8 +59,13 @@ def build_cited(cited_csv, not_cited_csv):
 def load():
     if os.path.exists(LOG):
         with open(LOG, encoding="utf-8") as f:
-            return json.load(f)
-    return {"entries": []}
+            data = json.load(f)
+    else:
+        data = {}
+    # "published" arrived after "entries"; older logs simply lack it.
+    data.setdefault("entries", [])
+    data.setdefault("published", [])
+    return data
 
 
 def save(data):
@@ -81,6 +93,73 @@ def add(slug, keyword, cited, ctr_delta, pos_delta, ai_overview, note):
         save(data)
     cited_str = ", ".join(f"{k}={'yes' if v else 'no'}" for k, v in cited.items()) or "-"
     print(f"Verification recorded for {slug} ('{keyword}'): {cited_str}")
+    return 0
+
+
+def _tail(slug):
+    """Last path segment, lowercased, so info/foo and foo name the same page."""
+    return str(slug or "").strip().rstrip("/").rsplit("/", 1)[-1].lower()
+
+
+def publish(slug, on=None):
+    """Record the go-live date for a page (re-publishing replaces the earlier date)."""
+    on = on or date.today().isoformat()
+    date.fromisoformat(on)  # fail loudly on a typo rather than store garbage
+    with locked(LOG):
+        data = load()
+        data["published"] = [p for p in data["published"] if _tail(p["page_slug"]) != _tail(slug)]
+        data["published"].append({"page_slug": slug, "date": on})
+        save(data)
+    print(f"Publish date recorded for {slug}: {on}. Verification due "
+          f"{(date.fromisoformat(on) + timedelta(days=VERIFY_AFTER_DAYS)).isoformat()}.")
+    return 0
+
+
+def due_items(published, entries, today, days=VERIFY_AFTER_DAYS):
+    """Published pages still lacking a verification entry dated on/after their publish date.
+
+    Returns dicts {page_slug, published, due, days_left}, most overdue first.
+    days_left <= 0 means due now (negative = overdue)."""
+    out = []
+    for p in published:
+        pub = date.fromisoformat(p["date"])
+        verified = any(
+            _tail(e.get("page_slug")) == _tail(p["page_slug"])
+            and date.fromisoformat(e["date"]) >= pub
+            for e in entries
+        )
+        if verified:
+            continue
+        due = pub + timedelta(days=days)
+        out.append({"page_slug": p["page_slug"], "published": pub.isoformat(),
+                    "due": due.isoformat(), "days_left": (due - today).days})
+    return sorted(out, key=lambda r: r["days_left"])
+
+
+def print_due(items, indent="  "):
+    for r in items:
+        if r["days_left"] < 0:
+            when = f"OVERDUE by {-r['days_left']}d"
+        elif r["days_left"] == 0:
+            when = "due today"
+        else:
+            when = f"due in {r['days_left']}d"
+        print(f"{indent}{r['page_slug']}  (published {r['published']}, {when})")
+
+
+def due(days=VERIFY_AFTER_DAYS):
+    data = load()
+    if not data["published"]:
+        print("No publish dates recorded. After a page goes live: "
+              "`verify.py publish <slug>` starts its verification clock.")
+        return 0
+    items = due_items(data["published"], data["entries"], date.today(), days)
+    if not items:
+        print("Every published page has a verification entry.")
+        return 0
+    print(f"\nVerification queue ({len(items)} page(s), {days}-day window):\n")
+    print_due(items)
+    print()
     return 0
 
 
@@ -187,6 +266,13 @@ if __name__ == "__main__":
 
     sub.add_parser("report")
 
+    pb = sub.add_parser("publish", help="record the go-live date (starts the verification clock)")
+    pb.add_argument("slug")
+    pb.add_argument("--date", default=None, help="YYYY-MM-DD, defaults to today")
+
+    d = sub.add_parser("due", help="published pages awaiting their verification pass")
+    d.add_argument("--days", type=int, default=VERIFY_AFTER_DAYS)
+
     args = ap.parse_args()
     if args.cmd == "add":
         cited = build_cited(args.cited, args.not_cited)
@@ -196,3 +282,7 @@ if __name__ == "__main__":
         sys.exit(list_entries(args.slug))
     if args.cmd == "report":
         sys.exit(report())
+    if args.cmd == "publish":
+        sys.exit(publish(args.slug, args.date))
+    if args.cmd == "due":
+        sys.exit(due(args.days))

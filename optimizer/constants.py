@@ -12,11 +12,15 @@ STOP_WORDS = {
 }
 
 # Link budget: (max_words, internal_max, external_max). Used by qa_check.py.
+# internal_max is the HARD cap (past it = diminishing returns + readability damage).
+# Target is ~1 internal link per 200-250 reader words; see QUALITY-RULES.md for the
+# target ranges, the per-page-type table, and money-page/placement guidance.
 LINK_BUDGET = [
-    (2000, 4, 3),
-    (4000, 7, 4),
-    (6000, 9, 5),
-    (10 ** 9, 10, 6),
+    (1000, 6, 3),
+    (2000, 12, 4),
+    (4000, 15, 4),
+    (6000, 20, 5),
+    (10 ** 9, 25, 6),
 ]
 
 # Stats/freshness: content must use data from this year or later (Rule 12).

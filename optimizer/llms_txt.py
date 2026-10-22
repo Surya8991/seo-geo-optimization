@@ -9,7 +9,7 @@ to ship, so this generator exists for that narrow purpose, not for AI-search ran
 
 Usage:
     python optimizer/llms_txt.py                      # print to stdout
-    python optimizer/llms_txt.py > llms.txt           # write the file
+    python optimizer/llms_txt.py --out llms.txt           # write the file
 """
 import json
 import os
@@ -47,18 +47,25 @@ def build_llms_txt(brand, base_url, content_rows, money_pages, tagline=None):
     return "\n".join(lines).rstrip() + "\n"
 
 
-def main():
+def main(argv=None):
     if not os.path.exists(AUDIT):
         print(f"ERROR: {AUDIT} not found. Run build_scorecard.py or copy audit.example.json.",
               file=sys.stderr)
         return 1
-    data = json.load(open(AUDIT, encoding="utf-8"))
+    with open(AUDIT, encoding="utf-8") as fh:
+        data = json.load(fh)
     rows = data.get("audit_rows", [])
     money = data.get("money_pages", [])
     out = build_llms_txt(CONFIG.get("brand_name", ""), CONFIG.get("base_url", ""), rows, money)
-    sys.stdout.write(out)
+    # --out writes UTF-8 directly; `> file` in Windows PowerShell 5.1 would write UTF-16.
+    argv = argv or []
+    if "--out" in argv and argv.index("--out") + 1 < len(argv):
+        with open(argv[argv.index("--out") + 1], "w", encoding="utf-8", newline="\n") as f:
+            f.write(out)
+    else:
+        sys.stdout.write(out)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

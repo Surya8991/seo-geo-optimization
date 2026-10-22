@@ -22,7 +22,7 @@ block, which isn't reader-visible and can rot silently - and fails on a 404 (bro
 Beyond the rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
 skipped levels); that every `<img>` has descriptive alt text and a non-generic filename; that
 every JSON-LD block parses and a present Article/HowTo carries its required fields
-(headline/author/datePublished/dateModified, or name + every step's name+text); a current-year
+(headline/author/datePublished/dateModified, or name + every step's name+text); a recent (2024+)
 freshness date (dateModified or a visible "last updated"); and no pre-2024 statistics (a year
 before 2024 sitting next to a stat signal).
 
@@ -69,12 +69,37 @@ too small (under 5 pages) for their comparison to mean anything.
 
 ## Link budget bands (Rule 3)
 
-| Reader word count | Internal (max) | External hyperlinks (max) |
-|-------------------|----------------|---------------------------|
-| Under 2,000 | 4 | 3 |
-| 2,000-4,000 | 7 | 4 |
-| 4,000-6,000 | 9 | 5 |
-| Over 6,000 | 10 | 6 |
+Internal-link target is roughly **1 contextual link per 200-250 reader words**, scaling with
+length. Relevance and in-body placement beat hitting a count (Google confirmed it does not
+count links or words). The band below gives the working **target** range and a **hard max**;
+past the max you get diminishing returns and readability damage (2026 research).
+
+| Reader word count | Internal (target) | Internal (hard max) | External (max) | Money-page links |
+|-------------------|-------------------|---------------------|----------------|------------------|
+| Under 1,000 | 3-5 | 6 | 2-3 | 1-2 |
+| 1,000-2,000 | 5-8 | 12 | 2-4 | 1-2 |
+| 2,000-4,000 | 8-12 | 15 | 3-4 | 1-2 |
+| 4,000-6,000 | 12-18 | 20 | 4-5 | 2 |
+| Over 6,000 | 15-22 | 25 | 5-6 | 2 |
+
+**Per-page-type quick reference** (apply the matching row; counts are in-body contextual links):
+
+| Page type | Internal | External | Money-page |
+|-----------|----------|----------|-----------|
+| Blog article (~1,200-2,500w) | 5-10 (2-4 to content, 1-2 to a role/company guide, 1-2 money) | 2-4 (stats/studies only) | 1-2 (`/builder` + the relevant money page) |
+| Role page (~1,100-1,300w) | 5-8 (3-6 related roles + money) | 0-2 (only if citing a stat inline) | 2 (builder, templates) |
+| Company guide (~1,200w) | 5-8 (related guides + 1 role + builder) | 2-4 (official source + stats) | 1-2 |
+| Comparison / landing / money page | 2-5 (focused: pricing, builder, templates) | 1-2 (competitor site, nofollow) | links builder + pricing |
+
+**Money-page links:** 1-2 per content page (the page's money page from `audit.json`, plus one
+tool/builder CTA where natural). Do not stuff conversion links. Do **not** in-content link the
+homepage from every page - it already receives the most links via site navigation.
+
+**Placement + relevance (2026 research):** in-body links carry more SEO weight than
+footer/sidebar links (Moz); every link must pass "would a reader actually click this here?";
+external links only for a specific stat, study, or quote, all `rel="nofollow" target="_blank"`.
+Internal links also help AI crawlers map page relationships (a GEO lever), and authoritative
+external citations strengthen E-E-A-T.
 
 **Country/city page restriction (Rule 3 addition):** Never link to country or city pages
 (the geo-slug list lives in `config.json` and drives the automated check). Only link to

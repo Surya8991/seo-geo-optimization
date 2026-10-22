@@ -12,18 +12,41 @@ Usage:
     python optimizer/technical_seo.py https://www.example.com/blog/some-post
     python optimizer/technical_seo.py blog/some-post   # resolved against base_url
 """
-import re
 import sys
 import urllib.request
+from html.parser import HTMLParser
 
 from config_loader import CONFIG
 
 BASE_URL = CONFIG["base_url"].rstrip("/") + "/"
 
-_ROBOTS_META_RE = re.compile(r'<meta\s+name="robots"[^>]*content="([^"]*)"', re.I)
-_CANONICAL_RE = re.compile(r'<link\s+rel="canonical"[^>]*href="([^"]*)"', re.I)
-_HREFLANG_RE_A = re.compile(r'<link\s+rel="alternate"[^>]*hreflang="([^"]+)"[^>]*href="([^"]*)"', re.I)
-_HREFLANG_RE_B = re.compile(r'<link\s+rel="alternate"[^>]*href="([^"]*)"[^>]*hreflang="([^"]+)"', re.I)
+class _HeadTags(HTMLParser):
+    """Collects robots metas, canonical hrefs and hreflang links regardless of
+    attribute order, quote style or tag case (regexes missed all three)."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.robots, self.canonicals, self.hreflangs = [], [], []
+
+    def handle_starttag(self, tag, attrs):
+        a = {k.lower(): (v or "") for k, v in attrs}
+        if tag == "meta" and a.get("name", "").strip().lower() in ("robots", "googlebot"):
+            self.robots.append(a.get("content", ""))
+        elif tag == "link":
+            rels = a.get("rel", "").lower().split()
+            if "canonical" in rels:
+                self.canonicals.append(a.get("href", ""))
+            elif "alternate" in rels and a.get("hreflang"):
+                self.hreflangs.append((a["hreflang"].strip(), a.get("href", "")))
+
+    handle_startendtag = handle_starttag
+
+
+def _parse_head(html):
+    p = _HeadTags()
+    p.feed(html)
+    p.close()
+    return p
 
 
 def resolve_url(target):
@@ -34,18 +57,21 @@ def resolve_url(target):
 def is_noindexed(html, headers=None):
     """True if a meta robots tag or an X-Robots-Tag response header contains
     'noindex' - a page silently dropped from the index is worse than a bad rank."""
-    for m in _ROBOTS_META_RE.finditer(html):
-        if "noindex" in m.group(1).lower():
+    for content in _parse_head(html).robots:
+        if "noindex" in content.lower():
             return True
-    if headers and "noindex" in (headers.get("X-Robots-Tag") or "").lower():
-        return True
+    if headers:
+        # Header names are case-insensitive; servers may send "x-robots-tag".
+        for k, v in headers.items():
+            if k.lower() == "x-robots-tag" and "noindex" in (v or "").lower():
+                return True
     return False
 
 
 def canonical_issues(html, expected_url):
     """Problems with the page's canonical tag(s): missing, more than one, or
     pointing somewhere other than the page's own URL (trailing-slash insensitive)."""
-    hrefs = _CANONICAL_RE.findall(html)
+    hrefs = _parse_head(html).canonicals
     issues = []
     if not hrefs:
         issues.append('no <link rel="canonical"> tag found')
@@ -64,9 +90,7 @@ def extract_hreflang_links(html):
     tags, tolerant of attribute order. lang codes are lowercased ('x-default'
     included as-is)."""
     out = {}
-    for lang, href in _HREFLANG_RE_A.findall(html):
-        out[lang.lower()] = href
-    for href, lang in _HREFLANG_RE_B.findall(html):
+    for lang, href in _parse_head(html).hreflangs:
         out.setdefault(lang.lower(), href)
     return out
 

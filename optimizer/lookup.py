@@ -21,14 +21,22 @@ SCORECARD = os.path.join(BASE, "data", "scorecard.json")
 AUDIT = os.path.join(BASE, "data", "audit.json")
 
 
+def _tail(row):
+    ref = str(row.get("slug") or row.get("url") or "").lower().rstrip("/")
+    return ref.rsplit("/", 1)[-1]
+
+
 def find(rows, frag, keys):
+    """Rows whose fields contain `frag`. An exact slug match wins outright, so
+    'info/agile' resolves to that page instead of being 'ambiguous' with 'info/agile-scrum'."""
     frag = frag.lower().strip().rstrip("/")
     hits = []
     for r in rows:
         hay = " ".join(str(r.get(k, "")) for k in keys).lower()
         if frag in hay:
             hits.append(r)
-    return hits
+    exact = [r for r in hits if _tail(r) == frag.rsplit("/", 1)[-1]]
+    return exact if len(exact) == 1 else hits
 
 
 def interpret(sc):
@@ -72,8 +80,10 @@ def main(frag):
         print(f"ERROR: audit file not found: {AUDIT}")
         return 1
 
-    sc_data = json.load(open(SCORECARD, encoding="utf-8")).get("pages", [])
-    au_data = json.load(open(AUDIT, encoding="utf-8")).get("audit_rows", [])
+    with open(SCORECARD, encoding="utf-8") as f:
+        sc_data = json.load(f).get("pages", [])
+    with open(AUDIT, encoding="utf-8") as f:
+        au_data = json.load(f).get("audit_rows", [])
 
     sc_hits = find(sc_data, frag, ["url", "slug", "title"])
     au_hits = find(au_data, frag, ["url", "slug", "title", "primary_keyword"])
@@ -90,6 +100,11 @@ def main(frag):
 
     sc = sc_hits[0] if sc_hits else {}
     au = au_hits[0] if au_hits else {}
+    if sc and au and _tail(sc) != _tail(au):
+        # Never merge a scorecard row and an audit row that belong to different pages.
+        print(f"'{frag}' matches different pages in scorecard ({_tail(sc)}) and audit ({_tail(au)}).")
+        print("Narrow the fragment.")
+        return 1
 
     print("\n" + "=" * 70)
     print("PAGE BRIEF:", (au.get("title") or au.get("name") or sc.get("title") or frag))
