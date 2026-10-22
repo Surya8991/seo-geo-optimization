@@ -21,7 +21,7 @@ jobs:
       - name: Ruff lint
         run: ruff check .
 
-  test:
+  tests:
     # Windows too: the maintainer runs on Windows, where file locking, encodings and
     # os.replace behave differently from Linux.
     runs-on: ${{ matrix.os }}
@@ -43,3 +43,15 @@ jobs:
         run: pytest -q --cov --cov-report=term
       - name: Byte-compile all Python
         run: python -m compileall -q build_scorecard.py optimizer
+
+  # Single status named "test" for branch protection: matrix jobs report as
+  # "tests (os, version)", so the required check needs one stable name.
+  test:
+    if: always()
+    needs: [lint, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require lint and all test jobs to pass
+        run: |
+          test "${{ needs.lint.result }}" = "success"
+          test "${{ needs.tests.result }}" = "success"
