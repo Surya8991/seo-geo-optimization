@@ -95,7 +95,9 @@ Then generate 3 meta options from the actual content.
 python optimizer/qa_check.py "final output/<slug>-green.html" --words <reader_word_count> --keyword "<primary keyword>"
 python optimizer/linkcheck.py "final output/<slug>-green.html"   # every internal link resolves to a live, canonical URL (no 404s, no redirects)
 python optimizer/meta_audit.py   # confirm this page's meta title/description are unique site-wide
+python optimizer/citations.py add <slug> --stat "<stat as written>" --source "<source>" --year <YYYY> --url "<source url>"   # one per external stat
 ```
+After publishing, run `python optimizer/technical_seo.py <published URL or slug>` (noindex / canonical check on the LIVE page).
 Every hard check must pass (including the changes-summary table, heading hierarchy, image alt
 text, keyword placement, and valid JSON-LD parsing); aim for Flesch 60+. Then the manual checks: re-score the 50-point checklist (PASS-before vs
 PASS-after), spot-check 3-4 external sources, read for flow, confirm no cannibalization. Record

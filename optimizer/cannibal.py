@@ -46,7 +46,8 @@ def main(phrase, exclude):
 
     # --- Pages (full scorecard data) ---
     if os.path.exists(SCORECARD):
-        pages = json.load(open(SCORECARD, encoding="utf-8")).get("pages", [])
+        with open(SCORECARD, encoding="utf-8") as _f:
+            pages = json.load(_f).get("pages", [])
         pages_count = len(pages)
         for p in pages:
             hay = (p.get("title", "") + " " + p.get("url", "") + " " + p.get("slug", "")).lower()
@@ -64,7 +65,8 @@ def main(phrase, exclude):
 
     # --- Blog pages (may be strings or dicts) ---
     if os.path.exists(AUDIT):
-        audit_data = json.load(open(AUDIT, encoding="utf-8"))
+        with open(AUDIT, encoding="utf-8") as _f:
+            audit_data = json.load(_f)
         blog_pages = audit_data.get("blog_pages", [])
         for b in blog_pages:
             if isinstance(b, str):

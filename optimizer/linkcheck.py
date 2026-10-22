@@ -22,7 +22,7 @@ import urllib.error
 from urllib.parse import urljoin
 
 from config_loader import CONFIG
-from qa_check import strip_note_blocks, extract_jsonld_blocks
+from qa_check import strip_note_blocks, extract_jsonld_blocks, is_internal_href
 
 DOMAIN = re.sub(r"^www\.", "", CONFIG["domain"].lower())
 BASE_URL = CONFIG["base_url"].rstrip("/") + "/"
@@ -35,7 +35,7 @@ def extract_internal_links(html):
     and Cloudflare email-protection links.
     """
     body = strip_note_blocks(html)
-    hrefs = re.findall(r'<a\s[^>]*href="([^"]+)"[^>]*>', body, re.I)
+    hrefs = [m[1] for m in re.findall(r"""<a\s[^>]*href\s*=\s*(["'])([^"']+)\1[^>]*>""", body, re.I)]
     seen, out = set(), []
     for h in hrefs:
         hl = h.strip()
@@ -43,8 +43,7 @@ def extract_internal_links(html):
             continue
         if "/cdn-cgi/l/email-protection" in hl:
             continue
-        is_internal = hl.startswith("/") or DOMAIN in hl.lower()
-        if not is_internal:
+        if not is_internal_href(hl):
             continue
         absolute = urljoin(BASE_URL, hl)
         if absolute not in seen:
@@ -66,18 +65,36 @@ def extract_breadcrumb_links(html):
             data = json.loads(block)
         except ValueError:
             continue
-        if data.get("@type") != "BreadcrumbList":
-            continue
-        for item in data.get("itemListElement", []):
-            url = (item or {}).get("item", "").strip()
-            if not url or url in seen:
+        for node in _jsonld_nodes(data):
+            types = node.get("@type")
+            types = types if isinstance(types, list) else [types]
+            if "BreadcrumbList" not in types:
                 continue
-            is_internal = url.startswith("/") or DOMAIN in url.lower()
-            if not is_internal:
-                continue
-            seen.add(url)
-            urls.append(urljoin(BASE_URL, url))
+            elements = node.get("itemListElement", [])
+            for el in elements if isinstance(elements, list) else [elements]:
+                if not isinstance(el, dict):
+                    continue
+                item = el.get("item")
+                # `item` is a URL string, or a Thing object carrying "@id"/"url".
+                if isinstance(item, dict):
+                    item = item.get("@id") or item.get("url")
+                url = item.strip() if isinstance(item, str) else ""
+                if not url or url in seen or not is_internal_href(url):
+                    continue
+                seen.add(url)
+                urls.append(urljoin(BASE_URL, url))
     return urls
+
+
+def _jsonld_nodes(data):
+    """Flatten a JSON-LD payload (object, array, or {"@graph": [...]}) into dict nodes."""
+    if isinstance(data, list):
+        for d in data:
+            yield from _jsonld_nodes(d)
+    elif isinstance(data, dict):
+        yield data
+        if "@graph" in data:
+            yield from _jsonld_nodes(data["@graph"])
 
 
 def classify(url, status, final_url, error=None):

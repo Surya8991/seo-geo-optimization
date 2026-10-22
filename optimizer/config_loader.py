@@ -6,6 +6,16 @@ anywhere else.
 """
 import json
 import os
+import sys
+
+# Windows consoles/pipes default to cp1252, so printing a heading or URL containing a
+# non-latin character would raise UnicodeEncodeError mid-report. Every script imports
+# this module, so make stdout/stderr UTF-8 here once.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError, OSError):
+        pass
 
 _DEFAULTS = {
     "brand_name": "Your Brand",

@@ -235,7 +235,7 @@ next page by priority.
 - **Site-wide technical + link health.** `python optimizer/sitecheck.py sitemap <sitemap-url>`
   and `python optimizer/sitecheck.py crawl` check the WHOLE inventory (not just the page you're
   currently optimizing) for sitemap orphans and broken/redirecting pages.
-- **pricing.md for AI agents.** `python optimizer/pricing.py > pricing.md` generates a
+- **pricing.md for AI agents.** `python optimizer/pricing.py --out pricing.md` generates a
   skeleton (name + URL per money page); fill in real price/limits/features by hand, publish at
   the site root, and keep it current - an AI agent evaluating the service skips a vendor whose
   pricing it can't parse. Revisit whenever a money page's pricing changes, not just quarterly.

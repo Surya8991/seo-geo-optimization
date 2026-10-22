@@ -53,7 +53,8 @@ def main():
     if not os.path.exists(AUDIT):
         print(f"ERROR: {AUDIT} not found. Run build_scorecard.py or copy audit.example.json.")
         return 1
-    rows = json.load(open(AUDIT, encoding="utf-8")).get("audit_rows", [])
+    with open(AUDIT, encoding="utf-8") as _f:
+        rows = json.load(_f).get("audit_rows", [])
     print(f"\nMeta uniqueness audit across {len(rows)} pages\n")
     warning = small_inventory_warning(len(rows), "audit.json")
     if warning:
