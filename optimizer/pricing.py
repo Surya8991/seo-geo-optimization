@@ -57,7 +57,7 @@ def main(argv=None):
         print(f"ERROR: {AUDIT} not found. Run build_scorecard.py or copy audit.example.json.",
               file=sys.stderr)
         return 1
-    with open(AUDIT, encoding="utf-8") as fh:
+    with open(AUDIT, encoding="utf-8-sig") as fh:
         data = json.load(fh)
     money = data.get("money_pages", [])
     out = build_pricing_skeleton(CONFIG.get("brand_name", ""), money)

@@ -4,6 +4,8 @@ The hard rules from `AGENTS.md`, restated as **pass criteria** with how each is
 verified. `AUTO` = enforced by `qa_check.py`. `MANUAL` = human judgment required.
 `AGENTS.md` is the authoritative wording; this is the checklist you run against.
 Wherever this says "the brand" or `example.com`, the real values come from `config.json`.
+Items marked **house style** are this project's editorial conventions (chosen for
+consistency and readability), not findings from search-engine documentation or research.
 
 Run the gate before saving any output (pass `--keyword` to also check primary-keyword placement):
 
@@ -22,9 +24,13 @@ block, which isn't reader-visible and can rot silently - and fails on a 404 (bro
 Beyond the rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
 skipped levels); that every `<img>` has descriptive alt text and a non-generic filename; that
 every JSON-LD block parses and a present Article/HowTo carries its required fields
-(headline/author/datePublished/dateModified, or name + every step's name+text); a recent (2024+)
-freshness date (dateModified or a visible "last updated"); and no pre-2024 statistics (a year
-before 2024 sitting next to a stat signal).
+(headline/author/datePublished/dateModified, or name + every step's name+text); a recent
+freshness date (dateModified or a visible "last updated"); and no stale statistics (a year before
+`MIN_STAT_YEAR` sitting next to a stat signal). `MIN_STAT_YEAR` rolls with the calendar: current
+year minus 2 (2024 in 2026), or a fixed year if `min_stat_year` is set in `config.json`.
+
+It reports advisory `[WARN]` lines that never fail the gate:
+- **FAQ count outside the house-style band** - see the FAQ count bands below.
 
 It also reports several soft `[INFO]` signals - not hard fails, but worth acting on:
 - **Repeated stat** - the same exact percentage (e.g. `40%`) appears 3+ times in the reader
@@ -61,18 +67,19 @@ too small (under 5 pages) for their comparison to mean anything.
 | 6 | Cannibalization check | No new H2 duplicates a subtopic another page or blog owns (search scorecard/audit data) | MANUAL |
 | 7 | Red removal markers | Thin/off-topic/outdated content wrapped in `.remove-block` + `.remove-tag` | MANUAL |
 | 8 | External link discipline | Hyperlink only for a specific stat/study/quote; well-known sources may be name-only. All ext links `rel="nofollow" target="_blank"` | AUTO (attrs) + MANUAL (judgment) |
-| 9 | American English | No British spellings (`-ise/-isation/-our/-re`, colour, behaviour, etc.) | AUTO |
+| 9 | American English (house style) | No British spellings (`-ise/-isation/-our/-re`, colour, behaviour, etc.) | AUTO |
 | 10 | No AI signals | No em dashes; varied sentences; no filler ("In today's rapidly evolving...", "It's worth noting...") | AUTO (dashes) + MANUAL (voice) |
-| 11 | FAQ quality + limits | FAQs target PAA / new angles, not body rehash; count band by words; HTML items == JSON-LD entries | AUTO (count) + MANUAL (angle) |
-| 12 | Stat verification | Every stat real, sourced, and 2024-2026; unverifiable stats removed | AUTO (flags pre-2024 years near a stat) + MANUAL (real/sourced) |
+| 11 | FAQ quality + limits | FAQs target PAA / new angles, not body rehash; HTML Question items == JSON-LD FAQPage entries; count band by words (house style) | AUTO (HTML == JSON-LD) + WARN (count band) + MANUAL (angle) |
+| 12 | Stat verification | Every stat real, sourced, and from `MIN_STAT_YEAR` on (current year minus 2); unverifiable stats removed | AUTO (flags older years near a stat) + MANUAL (real/sourced) |
 | 16 | Section self-sufficiency for AI extraction | Each H2/H3 opens by naming its actual subject (not a bare pronoun); acronyms redefined if the section could be quoted alone; heading has an `id` slug | AUTO (dangling-opener, long-paragraph, long-question-answer INFO checks) + MANUAL (read each section in isolation) |
 
-## Link budget bands (Rule 3)
+## Link budget bands (Rule 3, house style)
 
 Internal-link target is roughly **1 contextual link per 200-250 reader words**, scaling with
-length. Relevance and in-body placement beat hitting a count (Google confirmed it does not
-count links or words). The band below gives the working **target** range and a **hard max**;
-past the max you get diminishing returns and readability damage (2026 research).
+length. Relevance and in-body placement beat hitting a count (Google has said it does not
+count links or words). The band below is a **house-style** convention, not a published
+threshold: it gives the working **target** range and the **hard max** `qa_check.py` enforces,
+chosen to keep pages readable and links deliberate.
 
 | Reader word count | Internal (target) | Internal (hard max) | External (max) | Money-page links |
 |-------------------|-------------------|---------------------|----------------|------------------|
@@ -86,16 +93,15 @@ past the max you get diminishing returns and readability damage (2026 research).
 
 | Page type | Internal | External | Money-page |
 |-----------|----------|----------|-----------|
-| Blog article (~1,200-2,500w) | 5-10 (2-4 to content, 1-2 to a role/company guide, 1-2 money) | 2-4 (stats/studies only) | 1-2 (`/builder` + the relevant money page) |
-| Role page (~1,100-1,300w) | 5-8 (3-6 related roles + money) | 0-2 (only if citing a stat inline) | 2 (builder, templates) |
-| Company guide (~1,200w) | 5-8 (related guides + 1 role + builder) | 2-4 (official source + stats) | 1-2 |
-| Comparison / landing / money page | 2-5 (focused: pricing, builder, templates) | 1-2 (competitor site, nofollow) | links builder + pricing |
+| Blog article (~1,200-2,500w) | 5-10 (3-6 to related content, 1-2 to a category page, 1-2 money) | 2-4 (stats/studies only) | 1-2 (the relevant money page) |
+| Category / pillar page (~1,500-3,000w) | 8-12 (the cluster's articles + money) | 1-3 (official sources + stats) | 2 |
+| Comparison / landing / money page | 2-5 (focused: pricing, related money pages) | 1-2 (competitor site, nofollow) | links pricing + the closest alternative |
 
 **Money-page links:** 1-2 per content page (the page's money page from `audit.json`, plus one
-tool/builder CTA where natural). Do not stuff conversion links. Do **not** in-content link the
+more where natural). Do not stuff conversion links. Do **not** in-content link the
 homepage from every page - it already receives the most links via site navigation.
 
-**Placement + relevance (2026 research):** in-body links carry more SEO weight than
+**Placement + relevance:** in-body links carry more SEO weight than
 footer/sidebar links (Moz); every link must pass "would a reader actually click this here?";
 external links only for a specific stat, study, or quote, all `rel="nofollow" target="_blank"`.
 Internal links also help AI crawlers map page relationships (a GEO lever), and authoritative
@@ -106,7 +112,12 @@ external citations strengthen E-E-A-T.
 generic money/course pages, category pages, or other content pages. Geo landing pages do
 not add value as internal link destinations.
 
-## FAQ count bands (Rule 11)
+## FAQ count bands (Rule 11, house style)
+
+Advisory only: `qa_check.py` prints a `[WARN]` outside the band but does not fail. Google has
+limited FAQ rich results to well-known, authoritative government and health sites since
+August 2023, so the FAQ is not a SERP-feature play for most sites. Keep it because a short,
+well-marked-up Q&A block is easy for answer engines and LLMs to extract and quote.
 
 | Reader word count | FAQ count |
 |-------------------|-----------|

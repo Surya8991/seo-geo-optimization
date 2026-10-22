@@ -74,7 +74,7 @@ def unpublished(final_files, published):
 
 def _load_json(path, default):
     if os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8-sig") as f:
             return json.load(f)
     return default
 

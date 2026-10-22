@@ -17,7 +17,7 @@ import technical_seo
 class TestQaDashes:
     def _dashes(self, body):
         h = f"<p>{body}</p>"
-        import html as hl, re
+        import re
         return len(re.findall(r"(?<!-)--(?!-)", qa_check.visible_dash_text(h)))
 
     def test_spaced_double_hyphen_caught(self):

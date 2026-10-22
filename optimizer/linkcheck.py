@@ -21,8 +21,12 @@ import urllib.request
 import urllib.error
 from urllib.parse import urljoin
 
-from config_loader import CONFIG
-from qa_check import strip_note_blocks, extract_jsonld_blocks, is_internal_href
+try:
+    from config_loader import CONFIG
+    from qa_check import strip_note_blocks, extract_jsonld_blocks, is_internal_href
+except ImportError:
+    from optimizer.config_loader import CONFIG
+    from optimizer.qa_check import strip_note_blocks, extract_jsonld_blocks, is_internal_href
 
 DOMAIN = re.sub(r"^www\.", "", CONFIG["domain"].lower())
 BASE_URL = CONFIG["base_url"].rstrip("/") + "/"
@@ -124,7 +128,7 @@ def fetch_status(url, timeout=15):
 
 
 def run(path, fetcher=fetch_status):
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8-sig") as f:
         html = f.read()
     body_links = extract_internal_links(html)
     breadcrumb_links = [u for u in extract_breadcrumb_links(html) if u not in body_links]

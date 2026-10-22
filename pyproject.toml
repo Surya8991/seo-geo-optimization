@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seo-geo-optimization"
+version = "0.1.0"
+description = "Human-in-the-loop pipeline that optimizes one web page at a time for classic SEO and AI search (AIO/AEO/GEO)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dependencies = [
+    "openpyxl>=3.1,<4",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+seo-geo = "optimizer.cli:main"
+
+[tool.setuptools]
+packages = ["optimizer"]
+py-modules = ["build_scorecard"]
+
+[tool.setuptools.package-data]
+optimizer = ["*.md", "template.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["optimizer", "build_scorecard"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["final output"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = [
+    "E501",   # long lines: prose-heavy regexes and messages; formatting is not enforced
+    "E731",   # small lambdas are used deliberately in a few helpers
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]

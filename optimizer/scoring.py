@@ -116,8 +116,14 @@ def impression_band(imp):
     return "Very Low"
 
 
+# Placeholders accepted in config.json's money_page_pattern for the page-specific
+# URL segment. "{slug}" is canonical; "{course-slug}" is the legacy spelling and is
+# still honored so existing configs keep working.
+MONEY_PAGE_PLACEHOLDERS = ("{slug}", "{course-slug}")
+
+
 def money_page_pattern_regex(pattern):
-    """Turn config.json's {course-slug} money_page_pattern into a matching regex, so
+    """Turn config.json's {slug} money_page_pattern into a matching regex, so
     the money_pages sheet can be validated against the URL shape the operator declared.
     Returns None if the pattern has no placeholder to anchor on.
 
@@ -125,9 +131,10 @@ def money_page_pattern_regex(pattern):
     when the configured pattern doesn't (or vice versa), and that alone should not
     make every money page look mismatched.
     """
-    if "{course-slug}" not in pattern:
+    placeholder = next((ph for ph in MONEY_PAGE_PLACEHOLDERS if ph in pattern), None)
+    if placeholder is None:
         return None
-    escaped = re.escape(pattern.rstrip("/")).replace(re.escape("{course-slug}"), r"[a-z0-9-]+")
+    escaped = re.escape(pattern.rstrip("/")).replace(re.escape(placeholder), r"[a-z0-9-]+")
     return re.compile(f"^{escaped}/?$", re.I)
 
 
@@ -147,11 +154,34 @@ def header_index(header_row, names, fallback_idx):
     return fallback_idx, warning
 
 
+# Whole-word / whole-phrase intent signals. Substring matching misfired badly:
+# "vs" hit "canvas", "best" hit "best practices" (an informational query), and
+# "top" hit "laptop"/"desktop". Matching runs on word tokens from the slug + title.
+_COMMERCIAL_TERMS = ("vs", "versus", "comparison", "compare", "best", "top", "tools",
+                     "software", "alternatives", "alternative", "review", "reviews",
+                     "pricing", "cheapest")
+_NAVIGATIONAL_TERMS = ("login", "log in", "portal", "download", "register", "sign up",
+                       "signup", "sign in")
+# Phrases that contain a commercial word but are informational in intent.
+_INFORMATIONAL_OVERRIDES = ("best practices", "best practice")
+
+
+def _intent_text(slug, title):
+    """Lowercased word tokens of slug + title joined by single spaces, so phrase
+    checks like "sign up" work on both "sign-up" slugs and "Sign Up" titles."""
+    return " ".join(re.findall(r"[a-z0-9]+", f"{slug} {title}".lower()))
+
+
+def _has_phrase(text, phrase):
+    return re.search(rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])", text) is not None
+
+
 def classify_intent(slug, title):
-    t = (slug + " " + title).lower()
-    if any(s in t for s in ["vs", "versus", "comparison", "best", "top ", "tools",
-                            "software", "alternatives", "review"]):
+    t = _intent_text(slug, title)
+    for phrase in _INFORMATIONAL_OVERRIDES:
+        t = re.sub(rf"(?<![a-z0-9]){re.escape(phrase)}(?![a-z0-9])", " ", t)
+    if any(_has_phrase(t, s) for s in _COMMERCIAL_TERMS):
         return "commercial"
-    if any(s in t for s in ["login", "portal", "download", "register", "sign up"]):
+    if any(_has_phrase(t, s) for s in _NAVIGATIONAL_TERMS):
         return "navigational"
     return "informational"

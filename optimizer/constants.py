@@ -4,6 +4,12 @@ Shared constants used across the optimizer scripts, kept in one place so the
 stop-word list and rule thresholds do not drift between cannibal.py, ledger.py,
 and qa_check.py.
 """
+from datetime import date
+
+try:
+    from config_loader import CONFIG
+except ImportError:
+    from optimizer.config_loader import CONFIG
 
 # Generic stop words for subtopic tokenizing (cannibal.py, ledger.py).
 STOP_WORDS = {
@@ -24,7 +30,24 @@ LINK_BUDGET = [
 ]
 
 # Stats/freshness: content must use data from this year or later (Rule 12).
-MIN_STAT_YEAR = 2024
+# Rolling window: the current year and the two before it (in 2026 that is 2024-2026),
+# so the gate does not silently go stale every January. Pin a fixed year with
+# "min_stat_year" in config.json if you need one.
+STAT_YEAR_WINDOW = 2
+
+
+def default_min_stat_year(today=None):
+    """Oldest acceptable stat/freshness year: current year minus STAT_YEAR_WINDOW."""
+    return (today or date.today()).year - STAT_YEAR_WINDOW
+
+
+def resolve_min_stat_year(cfg=None, today=None):
+    """config.json's min_stat_year if set, else the rolling default."""
+    override = (cfg if cfg is not None else CONFIG).get("min_stat_year")
+    return override if override is not None else default_min_stat_year(today)
+
+
+MIN_STAT_YEAR = resolve_min_stat_year()
 
 # FAQ count band: (max_words, min_faqs, max_faqs). Used by qa_check.py (Rule 11).
 FAQ_BAND = [

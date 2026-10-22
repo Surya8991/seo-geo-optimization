@@ -29,7 +29,7 @@ cited. Do not treat GEO as a replacement.
   with a clean, sequential heading structure are cited markedly more often than pages with a
   flat or broken hierarchy (see Sources; figure varies by study).
 - Internal links to the topic cluster + money page; external links to authoritative sources.
-- Freshness: current-year references, updated date visible, stats from 2024-2026.
+- Freshness: current-year references, updated date visible, stats from the last three years (`MIN_STAT_YEAR`).
 - Mobile, fast, indexable, tables in `.table-scroll`.
 
 ## 2. AEO - Answer Engine Optimization (win PAA, snippets, AI Overviews)
@@ -90,7 +90,7 @@ lifts citation share:
 - **Heading hierarchy as a parse map.** The H1>H2>H3 tree is how a model finds the passage.
   Keep it strict and descriptive so each answer sits under a heading that names its question.
 - **Freshness cadence.** A large share of AI-cited sources rotate month to month; a current
-  "last updated" date and 2024-2026 stats keep a page in the citable set.
+  "last updated" date and recent (last three years) stats keep a page in the citable set.
 - **Off-site authority (flag, mostly beyond one page edit).** 2026 earned-media analyses
   report that the large majority (~85% in some studies) of AI citations come from third-party
   / earned media, not the brand's own site. This is the single strongest GEO lever this
@@ -119,22 +119,36 @@ lifts citation share:
   or a clearer content-marketing use case, rather than building it speculatively now.
 
 ## 5. Schema markup set (per page)
-Include as JSON-LD (Google-preferred) alongside the visible content:
+Include as JSON-LD (Google-preferred) alongside the visible content. Treat schema as a
+machine-readability and answer-extraction aid (it makes entities, dates, authors, and Q&A
+pairs unambiguous to parsers), not as a route to a rich result:
 - **Article / BlogPosting** - headline, author, datePublished, dateModified, publisher, image.
 - **FAQPage** - the FAQ block. HTML items must match the JSON-LD entries exactly (Rule 11).
+  Since August 2023 Google shows FAQ rich results only for well-known, authoritative
+  government and health sites, so for most sites this earns no SERP feature; keep it because
+  clean Q&A pairs are easy for answer engines and LLMs to lift.
 - **BreadcrumbList** - the category path.
-- **HowTo** - only when the page genuinely contains a step sequence.
+- **HowTo** - optional, only when the page genuinely contains a step sequence. Google removed
+  HowTo rich results entirely in September 2023; the markup now only documents structure.
 - **Author / Person** with `sameAs` - links the author entity to LinkedIn or a profile.
+- **speakable** - news publishers only (Google's speakable is a beta limited to news content);
+  do not add it to blog or product pages.
 The template ships the FAQPage JSON-LD; add the others in the build when applicable.
 
 ## 6. AI crawler access (training vs retrieval bots)
 This is per-site, but confirm it before blaming content. The AI companies run two separate
 crawler classes and confusing them either hides you from AI search or gives content away:
 - **Retrieval / search bots build the answers and citations:** `OAI-SearchBot`, `ChatGPT-User`,
-  `PerplexityBot`, `Claude-Web`. These must be allowed, or the page cannot be cited.
-- **Training bots collect data for future models:** `GPTBot`, `Google-Extended`, `CCBot`,
-  `anthropic-ai`. Blocking these has no effect on whether you are cited today; allowing or
-  blocking them is a separate call about model training and crawl cost.
+  `Claude-SearchBot`, `Claude-User`, `PerplexityBot`, `Perplexity-User`, plus classic
+  `Googlebot` and `Bingbot` (Bing's index also grounds Copilot and other assistants). These must
+  be allowed, or the page cannot be cited. The `*-User` agents fetch a page when a person asks
+  the assistant about it.
+- **Training bots / tokens collect data for future models:** `GPTBot`, `ClaudeBot`,
+  `Google-Extended`, `Applebot-Extended`, `CCBot`, `meta-externalagent`. Blocking these has no
+  effect on whether you are cited today; allowing or blocking them is a separate call about
+  model training and crawl cost.
+- **Retired:** `Claude-Web` and `anthropic-ai` no longer crawl; rules naming them do nothing.
+  `check_bots.py` flags them so the robots.txt can be tidied.
 Also confirm no blanket "Block AI Bots" toggle (e.g. Cloudflare) is catching the retrieval bots.
 
 ## 7. Per-engine differences + AI Overview monitoring
@@ -202,8 +216,8 @@ some are strategy or off-page (flag for the wider plan, do not block the page ed
 - [ ] Author / reviewer + credentials present; Article + Author schema planned.
 - [ ] Strict H1>H2>H3 hierarchy, no skipped levels.
 - [ ] FAQ targets real PAA, new angles only, HTML == JSON-LD (Rule 11).
-- [ ] Current "last updated" date; all stats 2024-2026 (Rule 12).
-- [ ] JSON-LD: Article + FAQPage + BreadcrumbList (+ HowTo/Author when applicable).
+- [ ] Current "last updated" date; all stats from the last three years, `MIN_STAT_YEAR` on (Rule 12).
+- [ ] JSON-LD: Article + FAQPage + BreadcrumbList (+ Author, and HowTo only for real step sequences).
 - [ ] Off-site authority gaps noted for the wider strategy (do not block the page).
 
 ## Sources

@@ -39,7 +39,7 @@ no on-page work earns a citation if they are blocked:
 ```bash
 python optimizer/check_bots.py
 ```
-If a retrieval bot (OAI-SearchBot, ChatGPT-User, PerplexityBot, Claude-Web) is BLOCKED, flag it
+If a retrieval bot (OAI-SearchBot, ChatGPT-User, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User) is BLOCKED, flag it
 to the user as a site-level fix; it is outside this page edit but gates all GEO results.
 
 ## Step 2 - Slug and URL review
@@ -50,7 +50,7 @@ Output: OPTIMIZE AS-IS / PIVOT KEYWORD (to X) / MERGE WITH [page] / REPOSITION.
 
 ## Step 4 - Audit current content
 Score the live content against all 50 points. Record current meta title (char count), meta
-description (char count), and H1. Flag thin or outdated sections, pre-2024 stats, weak
+description (char count), and H1. Flag thin or outdated sections, stale stats (older than `MIN_STAT_YEAR`), weak
 structure, missing schema/FAQ, and content to remove (red block).
 
 ## Step 5 - Competitor and keyword research
@@ -77,7 +77,7 @@ No meta tags yet. **Present this plan and wait for approval.**
 
 ## Step 7 - Build the optimized HTML
 Start from `optimizer/template.html`. Green blocks for additions, red for removals,
-publishing-fields box, AIO opening paragraph (40-60 words), 2024-2026 stats, FAQ with matching
+publishing-fields box, AIO opening paragraph (40-60 words), stats from `MIN_STAT_YEAR` on, FAQ with matching
 JSON-LD. Bake in `optimizer/MODERN-SEO-PLAYBOOK.md`. Specifically:
 - **Contextual internal links + anchor text:** each link is one a reader would genuinely
   click here; descriptive anchor naming the destination topic; no CTA words; max 1 per

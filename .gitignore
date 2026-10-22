@@ -1,6 +1,16 @@
 # Python
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+*.egg-info/
+build/
+dist/
+
+# Your real brand config stays local; config.example.json is the committed template.
+config.json
 
 # Generated data (outputs, may contain site data)
 data/*.json

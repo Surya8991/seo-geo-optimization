@@ -61,7 +61,7 @@ Output: OPTIMIZE AS-IS / PIVOT KEYWORD (to X) / MERGE WITH [page] / REPOSITION.
 ## STEP 4 - Audit current content
 Score the current content against all 50 points (PASS / NEEDS WORK / MISSING / N/A). Record
 the current meta title (char count), meta description (char count), and H1. Flag missing or
-thin sections, pre-2024 stats, weak heading structure, missing schema, no FAQ, keyword gaps,
+thin sections, stale stats (older than `MIN_STAT_YEAR`), weak heading structure, missing schema, no FAQ, keyword gaps,
 and any content that should be removed (red block). Note where the article jumps or buries
 the answer.
 
@@ -115,7 +115,7 @@ Start from `optimizer/template.html`. Keep good content unmarked; wrap additions
 `.new-block` + `.new-tag` (inline in `.new-inline`) and removals in `.remove-block` +
 `.remove-tag` with the reason. Include the publishing-fields box (meta title `NN/60`, meta
 description `NN/155`, H1), the AIO answer-first opening paragraph (40-60 words) after the H1,
-2024-2026 stats only, and a FAQ accordion whose JSON-LD matches the visible items. Bake in
+stats from `MIN_STAT_YEAR` (current year minus 2) on only, and a FAQ accordion whose JSON-LD matches the visible items. Bake in
 `optimizer/MODERN-SEO-PLAYBOOK.md`. The brand is named once, in the conclusion, only if
 natural. ZERO em/en dashes. American English only. Specifically:
 

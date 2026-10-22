@@ -23,7 +23,7 @@ table of contents, a key-terms `<dl>`, `HowTo` + `speakable` JSON-LD, and an aut
 crawl) and `optimizer/citations.py` (stat-provenance ledger); `technical_seo.py` extended with
 an hreflang audit; `qa_check.py` got an acronym-reuse INFO check, which caught a real issue on
 the live page (FAQ #3 reused "ROI" without a local definition - fixed); a live rendering audit
-against example.com confirmed content is server-rendered (no JS-visibility risk to retrieval
+against the live site (example.com) confirmed content is server-rendered (no JS-visibility risk to retrieval
 bots); `MODERN-SEO-PLAYBOOK.md` strengthened with concrete next-steps for entity signals and
 off-site mention monitoring. 45 new tests added (222 total).
 

@@ -22,7 +22,10 @@ import argparse
 try:
     from ledger import search as ledger_search
 except ImportError:
-    ledger_search = None
+    try:
+        from optimizer.ledger import search as ledger_search
+    except ImportError:
+        ledger_search = None
 
 try:
     from constants import STOP_WORDS as STOP, small_inventory_warning
@@ -46,7 +49,7 @@ def main(phrase, exclude):
 
     # --- Pages (full scorecard data) ---
     if os.path.exists(SCORECARD):
-        with open(SCORECARD, encoding="utf-8") as _f:
+        with open(SCORECARD, encoding="utf-8-sig") as _f:
             pages = json.load(_f).get("pages", [])
         pages_count = len(pages)
         for p in pages:
@@ -65,7 +68,7 @@ def main(phrase, exclude):
 
     # --- Blog pages (may be strings or dicts) ---
     if os.path.exists(AUDIT):
-        with open(AUDIT, encoding="utf-8") as _f:
+        with open(AUDIT, encoding="utf-8-sig") as _f:
             audit_data = json.load(_f)
         blog_pages = audit_data.get("blog_pages", [])
         for b in blog_pages:
@@ -103,7 +106,7 @@ def main(phrase, exclude):
     print(f'\nExisting pages overlapping "{phrase}" (strongest first):\n')
     if inv_warning:
         print(f"{inv_warning}\n")
-    for score, ov, page_type, p in scored[:15]:
+    for score, _ov, page_type, p in scored[:15]:
         flag = "  <-- STRONG OVERLAP, link instead of writing" if score >= 100 else ""
         if page_type == "PAGE":
             url = p.get("url", p.get("slug", "?"))

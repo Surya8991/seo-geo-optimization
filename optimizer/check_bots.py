@@ -4,9 +4,12 @@ Retrieval-bot access check: fetch the site's robots.txt and report whether the A
 RETRIEVAL/search bots (the ones that build answers and citations) are allowed. If
 these are blocked, the page cannot be cited no matter how well it is optimized.
 
-Retrieval bots (must be allowed to be cited): OAI-SearchBot, ChatGPT-User,
-PerplexityBot, Claude-Web / Claude-SearchBot, Google-Extended is a TRAINING bot and
-reported separately (blocking it does not affect citations).
+Retrieval / search bots (must be allowed to be cited): OAI-SearchBot, ChatGPT-User,
+Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, Googlebot, Bingbot.
+Training bots/tokens (GPTBot, ClaudeBot, Google-Extended, Applebot-Extended, CCBot,
+meta-externalagent) are reported separately: blocking them does not affect citations.
+Retired user agents (Claude-Web, anthropic-ai) are listed only so a stale robots.txt
+rule naming them can be spotted; they no longer crawl.
 
 Domain/base_url come from config.json.
 
@@ -19,11 +22,31 @@ import sys
 import urllib.request
 import urllib.error
 
-from config_loader import CONFIG
+try:
+    from config_loader import CONFIG
+except ImportError:
+    from optimizer.config_loader import CONFIG
 
-RETRIEVAL_BOTS = ["OAI-SearchBot", "ChatGPT-User", "PerplexityBot",
-                  "Claude-Web", "Claude-SearchBot", "Googlebot"]
-TRAINING_BOTS = ["GPTBot", "Google-Extended", "CCBot", "anthropic-ai", "ClaudeBot"]
+# Retrieval / search bots: fetch pages to build answers and citations (or, for the
+# *-User agents, fetch on a user's request). Blocking one removes you from that engine.
+RETRIEVAL_BOTS = [
+    "OAI-SearchBot", "ChatGPT-User",            # OpenAI: ChatGPT search index / user fetches
+    "Claude-SearchBot", "Claude-User",          # Anthropic: Claude search index / user fetches
+    "PerplexityBot", "Perplexity-User",         # Perplexity: index / user fetches
+    "Googlebot",                                # Google Search + AI Overviews/AI Mode
+    "Bingbot",                                  # Bing index (also grounds Copilot and others)
+]
+# Training crawlers / opt-out tokens: control use of content for model training only.
+TRAINING_BOTS = [
+    "GPTBot",               # OpenAI training
+    "ClaudeBot",            # Anthropic training
+    "Google-Extended",      # Gemini training token (not a separate crawler)
+    "Applebot-Extended",    # Apple Intelligence training token
+    "CCBot",                # Common Crawl
+    "meta-externalagent",   # Meta AI training
+]
+# Retired agents: no longer crawl. Reported for robots.txt hygiene only.
+RETIRED_BOTS = ["Claude-Web", "anthropic-ai"]
 
 
 def parse_robots(text):
@@ -106,6 +129,10 @@ def report(groups):
     for bot in TRAINING_BOTS:
         allowed = agent_can_fetch(groups, bot, "/")
         print(f"  [{'allowed' if allowed else 'blocked'}] {bot}")
+    stale = [b for b in RETIRED_BOTS if b.lower() in groups]
+    if stale:
+        print(f"\nRetired user agents still named in robots.txt (no effect, safe to remove): "
+              f"{', '.join(stale)}")
     star = agent_can_fetch(groups, "*", "/")
     print(f"\nDefault (*) can fetch '/': {'yes' if star else 'NO (blanket block, check this)'}")
     if not ok:

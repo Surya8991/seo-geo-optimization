@@ -43,7 +43,7 @@ def _tokens(s):
 
 def load():
     if os.path.exists(LEDGER):
-        with open(LEDGER, encoding="utf-8") as f:
+        with open(LEDGER, encoding="utf-8-sig") as f:
             return json.load(f)
     return {"entries": []}
 
@@ -121,8 +121,8 @@ if __name__ == "__main__":
     a.add_argument("--angle", default="")
     a.add_argument("--asset", default="")
 
-    l = sub.add_parser("list")
-    l.add_argument("slug", nargs="?", default=None)
+    lst = sub.add_parser("list")
+    lst.add_argument("slug", nargs="?", default=None)
 
     s = sub.add_parser("search")
     s.add_argument("phrase")

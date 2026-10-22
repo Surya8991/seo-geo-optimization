@@ -1,0 +1,4 @@
+# Dev / test tooling (CI installs this). Runtime deps come from requirements.txt.
+-r requirements.txt
+pytest-cov>=5
+ruff>=0.6
