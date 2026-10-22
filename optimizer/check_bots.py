@@ -14,6 +14,7 @@ Usage:
     python optimizer/check_bots.py                 # uses base_url from config.json
     python optimizer/check_bots.py https://foo.com # override the site
 """
+import re
 import sys
 import urllib.request
 import urllib.error
@@ -21,7 +22,7 @@ import urllib.error
 from config_loader import CONFIG
 
 RETRIEVAL_BOTS = ["OAI-SearchBot", "ChatGPT-User", "PerplexityBot",
-                  "Claude-Web", "Claude-SearchBot", "Google"]
+                  "Claude-Web", "Claude-SearchBot", "Googlebot"]
 TRAINING_BOTS = ["GPTBot", "Google-Extended", "CCBot", "anthropic-ai", "ClaudeBot"]
 
 
@@ -52,6 +53,15 @@ def parse_robots(text):
     return groups
 
 
+def _rule_matches(pattern, path):
+    """robots.txt pattern match: '*' matches any run of characters, a trailing '$'
+    anchors the end; otherwise the pattern is a path prefix."""
+    anchored = pattern.endswith("$")
+    body = pattern[:-1] if anchored else pattern
+    rx = ".*".join(re.escape(part) for part in body.split("*"))
+    return re.match(rx + ("$" if anchored else ""), path) is not None
+
+
 def agent_can_fetch(groups, agent, path="/"):
     """Longest-match Allow/Disallow decision for `agent` on `path`. Unknown agent
     falls back to the '*' group. Absent/empty -> allowed."""
@@ -65,7 +75,10 @@ def agent_can_fetch(groups, agent, path="/"):
             if kind == "disallow" and best_len < 0:
                 best_kind, best_len = "allow", 0
             continue
-        if path.startswith(pattern) and len(pattern) > best_len:
+        if not _rule_matches(pattern, path):
+            continue
+        # Longest match wins; on a tie the LEAST restrictive rule (allow) wins (RFC 9309).
+        if len(pattern) > best_len or (len(pattern) == best_len and kind == "allow"):
             best_kind, best_len = kind, len(pattern)
     return best_kind != "disallow"   # default allow when no rule matches
 

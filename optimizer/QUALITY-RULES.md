@@ -22,7 +22,7 @@ block, which isn't reader-visible and can rot silently - and fails on a 404 (bro
 Beyond the rules, `qa_check.py` also auto-verifies: a valid heading hierarchy (one H1, no
 skipped levels); that every `<img>` has descriptive alt text and a non-generic filename; that
 every JSON-LD block parses and a present Article/HowTo carries its required fields
-(headline/author/datePublished/dateModified, or name + every step's name+text); a current-year
+(headline/author/datePublished/dateModified, or name + every step's name+text); a recent (2024+)
 freshness date (dateModified or a visible "last updated"); and no pre-2024 statistics (a year
 before 2024 sitting next to a stat signal).
 

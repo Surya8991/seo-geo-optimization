@@ -36,7 +36,7 @@ Open `config.json` and set:
 - `optimizer/lookup.py` - Step 1: merge scorecard + audit into one brief with the lever to pull.
 - `optimizer/cannibal.py` - Rule 6: check if another page, blog, or past build already owns a subtopic (reads the content ledger too).
 - `optimizer/ledger.py` - the content ledger: record new sections so future pages do not repeat them (`add` / `list` / `search`).
-- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages; `--keyword` checks primary-keyword placement (Rule 2). Also validates heading hierarchy (one H1, no skipped levels), image alt text/filenames, JSON-LD parsing + Article-schema completeness, a current-year freshness date, and pre-2024 stats (Rule 12). Reports a Flesch readability score. It computes its own reader word count for the link-budget band (notes fully stripped, even when they wrap tables), so `--words` is advisory only and a too-high value can no longer unlock a larger link budget.
+- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages; `--keyword` checks primary-keyword placement (Rule 2). Also validates heading hierarchy (one H1, no skipped levels), image alt text/filenames, JSON-LD parsing + Article-schema completeness, a freshness date (2024 or later), and pre-2024 stats (Rule 12). Reports a Flesch readability score. It computes its own reader word count for the link-budget band (notes fully stripped, even when they wrap tables), so `--words` is advisory only and a too-high value can no longer unlock a larger link budget.
 - `optimizer/meta_audit.py` - find duplicate meta titles/descriptions across the site (reads audit.json).
 - `optimizer/next.py` - rank pending pages by priority (skips ones already built) to pick the next page to optimize.
 - `optimizer/striking.py` - list striking-distance pages (avg position 8-20 with impressions), the highest-ROI targets.
@@ -65,7 +65,7 @@ Open `config.json` and set:
 1. Review note (yellow `.note`) - what changed, source articles, publish instructions, slug change (if any). Not reader-facing.
 2. Publishing fields (blue `.note`) - meta title `(NN/60)`, meta description `(NN/155)`, H1. Not reader-facing.
 3. H1 containing the primary keyword.
-4. AIO opening paragraph (40-60 word answer-first definition, natural prose, no card), then 2-3 context sentences.
+4. AIO opening paragraph (40-60 word answer-first definition; the gate fails outside 30-80, natural prose, no card), then 2-3 context sentences.
 5. Body with strict H2/H3 hierarchy. New content in `.new-block` + `.new-tag`; inline additions in `.new-inline`; removals in `.remove-block` + `.remove-tag` with the reason.
 6. Tables wrapped in `.table-scroll`.
 7. Conclusion (brand named once max, only if natural).
