@@ -17,9 +17,24 @@ class LockTimeout(RuntimeError):
     pass
 
 
+STALE_LOCK_SECONDS = 60
+
+
+def _break_if_stale(lock_path):
+    """A hard-killed process leaves its lock behind forever; a lock this old cannot
+    belong to a live add (each holds it for milliseconds), so remove it."""
+    try:
+        if time.time() - os.path.getmtime(lock_path) > STALE_LOCK_SECONDS:
+            os.remove(lock_path)
+    except OSError:
+        pass
+
+
 @contextlib.contextmanager
 def locked(path, timeout=10, poll=0.05):
     lock_path = path + ".lock"
+    # data/ may not exist yet on the first add (save() creates it, but only after the lock).
+    os.makedirs(os.path.dirname(os.path.abspath(lock_path)), exist_ok=True)
     deadline = time.time() + timeout
     while True:
         try:
@@ -27,6 +42,7 @@ def locked(path, timeout=10, poll=0.05):
             os.close(fd)
             break
         except FileExistsError:
+            _break_if_stale(lock_path)
             if time.time() > deadline:
                 raise LockTimeout(
                     f"Could not acquire {lock_path} within {timeout}s. If no other "

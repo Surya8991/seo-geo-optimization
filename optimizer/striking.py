@@ -37,7 +37,8 @@ def main(lo, hi, min_imp):
     if not os.path.exists(SCORECARD):
         print(f"ERROR: {SCORECARD} not found. Run build_scorecard.py or copy scorecard.example.json.")
         return 1
-    pages = json.load(open(SCORECARD, encoding="utf-8")).get("pages", [])
+    with open(SCORECARD, encoding="utf-8") as _f:
+        pages = json.load(_f).get("pages", [])
     hits = striking_pages(pages, lo, hi, min_imp)
     print(f"\nStriking-distance pages (position {lo}-{hi}, impressions >= {min_imp:,}):")
     print(f"{len(hits)} of {len(pages)} pages. Highest upside first:\n")
