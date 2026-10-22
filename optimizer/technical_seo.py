@@ -16,7 +16,10 @@ import sys
 import urllib.request
 from html.parser import HTMLParser
 
-from config_loader import CONFIG
+try:
+    from config_loader import CONFIG
+except ImportError:
+    from optimizer.config_loader import CONFIG
 
 BASE_URL = CONFIG["base_url"].rstrip("/") + "/"
 

@@ -63,7 +63,7 @@ def rank_inbound(target_tokens, pages, exclude_tail, country_slugs):
 
 def _load(path, default):
     if os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8-sig") as f:
             return json.load(f)
     return default
 

@@ -55,7 +55,7 @@ def _leading_number(s):
 
 def load():
     if os.path.exists(LEDGER):
-        with open(LEDGER, encoding="utf-8") as f:
+        with open(LEDGER, encoding="utf-8-sig") as f:
             return json.load(f)
     return {"entries": []}
 
@@ -179,8 +179,8 @@ if __name__ == "__main__":
     a.add_argument("--year", type=int, default=None)
     a.add_argument("--url", default="")
 
-    l = sub.add_parser("list")
-    l.add_argument("slug", nargs="?", default=None)
+    lst = sub.add_parser("list")
+    lst.add_argument("slug", nargs="?", default=None)
 
     s = sub.add_parser("stale")
     s.add_argument("--min-year", type=int, default=MIN_STAT_YEAR)

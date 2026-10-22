@@ -10,30 +10,49 @@ so there is no brand hard-coded here.
 Usage:
     python optimizer/qa_check.py "final output/some-page-green.html" --words 3200
     python optimizer/qa_check.py "final output/new-post.html" --words 1800 --new
+    python optimizer/qa_check.py "final output/some-page-green.html" --json   # machine-readable
 
 Optimize mode (default) expects green/red review markers and an end changes-summary
 table. --new mode is for a brand-new blog: clean publish-ready HTML, no diff markers.
-A Flesch reading-ease score is reported as guidance (target 60+).
+A Flesch reading-ease score is reported as guidance (house-style target 60+).
 
-Exit code 0 = all hard checks pass. Exit code 1 = at least one FAIL.
+Exit code 0 = all hard checks pass. Exit code 1 = at least one FAIL. WARN and INFO
+lines are advisory and never change the exit code.
 """
 import sys
 import re
 import json
 import html as html_lib
 import argparse
+from html.parser import HTMLParser
 from urllib.parse import urlparse
 
-from config_loader import CONFIG
-from constants import (
-    LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX, MIN_STAT_YEAR, FAQ_BAND,
-)
+try:
+    from config_loader import CONFIG
+    from constants import (
+        LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX, MIN_STAT_YEAR, FAQ_BAND,
+    )
+except ImportError:
+    from optimizer.config_loader import CONFIG
+    from optimizer.constants import (
+        LINK_BUDGET, META_TITLE_MAX, META_DESC_MIN, META_DESC_MAX, MIN_STAT_YEAR, FAQ_BAND,
+    )
 
 BRAND = CONFIG["brand_name"]
 # Strip a leading "www." PREFIX only. str.lstrip removes a character SET, so the
 # old lstrip("www.") mangled any domain starting with w/. (e.g. wine.com).
 DOMAIN = re.sub(r"^www\.", "", CONFIG["domain"].lower())
 MAX_BRAND = int(CONFIG.get("max_brand_mentions", 1))
+# Whole-word, case-insensitive brand match. A bare substring count made a short
+# brand like "Ace" hit "space"/"replace". Lookarounds rather than \b so a brand
+# that starts/ends with a non-word character ("Acme+") still anchors correctly.
+def brand_pattern(brand):
+    """Compiled whole-word matcher for `brand`, or None for an empty brand."""
+    brand = (brand or "").strip()
+    return re.compile(rf"(?<!\w){re.escape(brand)}(?!\w)", re.I) if brand else None
+
+
+_BRAND_RE = brand_pattern(BRAND)
 COUNTRY_SLUGS = set(CONFIG.get("country_slugs", []))
 
 # ---- rule tables -----------------------------------------------------------
@@ -66,7 +85,7 @@ _AMERICAN_ISE_BASES = {
     "devise", "noise", "poise", "cruise", "paradise", "merchandise",
     "compromise", "enterprise", "advertise", "improvise", "despise",
     "disguise", "excise", "incise", "chastise", "reprise", "demise", "guise",
-    "clockwise", "crosswise", "lengthwise", "expertise", "excise",
+    "clockwise", "crosswise", "lengthwise",
 }
 
 
@@ -141,6 +160,24 @@ def visible_dash_text(html):
     """Text for the double-hyphen check: no comments (their --> closer), styles (CSS --vars) or tags."""
     html = re.sub(r"<!--[\s\S]*?-->|<style[\s\S]*?</style>|<[^>]+>", " ", html, flags=re.I)
     return html_lib.unescape(html)
+
+
+def count_dashes(html):
+    """(em, en) dash counts across the document: literal characters, HTML entities
+    (&mdash; / &#8212;) and JSON \\u2014 / \\u2013 escapes. Decodes the JSON escapes
+    and the entities once into a single string, so each dash is counted exactly once
+    (the old version added the unescaped and the escape-decoded copies together and
+    counted every literal dash twice)."""
+    src = re.sub(r"\\u(2014|2013)", lambda m: chr(int(m.group(1), 16)), html, flags=re.I)
+    src = html_lib.unescape(src)
+    return src.count("\u2014"), src.count("\u2013")
+
+
+def brand_mentions(text, pattern=None):
+    """Whole-word, case-insensitive count of the configured brand (or `pattern`,
+    from brand_pattern()) in `text`."""
+    rx = pattern if pattern is not None else _BRAND_RE
+    return len(rx.findall(text)) if rx else 0
 
 
 def strip_tags(html):
@@ -329,9 +366,24 @@ def _syllables(word):
         n -= 1
     return max(n, 1)
 
+# Abbreviations whose period is not a sentence end. "etc." only counts as one when
+# the text carries on in lowercase or with punctuation (it often ends a sentence).
+_ABBREV_RE = re.compile(r"\b(?:e\.g|i\.e|vs|approx|Mr|Mrs|Ms|Dr)\.", re.I)
+_ETC_RE = re.compile(r"\betc\.(?=\s*[a-z,;:)])")
+
+
+def split_sentences(text):
+    """Sentence split for the readability score that does not break on decimals
+    (4.5, 3.14) or common abbreviations (e.g., i.e., vs., etc. mid-sentence)."""
+    t = re.sub(r"(?<=\d)\.(?=\d)", "", text)
+    t = _ABBREV_RE.sub(lambda m: m.group(0).replace(".", ""), t)
+    t = _ETC_RE.sub("etc", t)
+    return [s for s in re.split(r"[.!?]+", t) if s.strip()]
+
+
 def flesch_reading_ease(text):
-    """Rough Flesch Reading Ease. 60+ is the target (plain, readable prose)."""
-    sentences = [s for s in re.split(r"[.!?]+", text) if s.strip()]
+    """Rough Flesch Reading Ease. 60+ is the house-style target (plain, readable prose)."""
+    sentences = split_sentences(text)
     words = re.findall(r"[A-Za-z]+", text)
     if not sentences or not words:
         return None
@@ -523,13 +575,110 @@ def author_credential_gap(html):
             return True
     return False
 
+class _FaqMicrodata(HTMLParser):
+    """Counts Question items (itemtype .../Question) that sit inside a FAQPage
+    itemscope. Counting every itemprop="name" also counted author/publisher/product
+    names anywhere on the page, so a Person with itemprop="name" inflated the FAQ."""
+
+    _VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
+             "meta", "param", "source", "track", "wbr"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.stack = []        # (tag, opens_faq_scope)
+        self.faq_depth = 0     # >0 while inside a FAQPage scope
+        self.faq_scopes = 0
+        self.questions = 0
+
+    @staticmethod
+    def _type_is(attrs, name):
+        itemtype = attrs.get("itemtype") or ""
+        return any(t.rstrip("/").rsplit("/", 1)[-1] == name for t in itemtype.split())
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        opens = "itemscope" in a and self._type_is(a, "FAQPage")
+        if self.faq_depth and self._type_is(a, "Question"):
+            self.questions += 1
+        if opens:
+            self.faq_scopes += 1
+            self.faq_depth += 1
+        if tag not in self._VOID:
+            self.stack.append((tag, opens))
+
+    def handle_startendtag(self, tag, attrs):
+        if self.faq_depth and self._type_is(dict(attrs), "Question"):
+            self.questions += 1
+
+    def handle_endtag(self, tag):
+        # Pop to the matching open tag; tolerates unclosed <p>/<li> in sloppy HTML.
+        for i in range(len(self.stack) - 1, -1, -1):
+            if self.stack[i][0] == tag:
+                self.faq_depth -= sum(1 for _, opened in self.stack[i:] if opened)
+                del self.stack[i:]
+                return
+
+
+def faq_microdata_count(html):
+    """(questions, has_faqpage_scope) for microdata Question items inside a
+    FAQPage itemscope. Comments, scripts and styles are ignored."""
+    html = re.sub(r"<!--[\s\S]*?-->|<script[\s\S]*?</script>|<style[\s\S]*?</style>", " ",
+                  html, flags=re.I)
+    p = _FaqMicrodata()
+    p.feed(html)
+    p.close()
+    return p.questions, p.faq_scopes > 0
+
+
+def _jsonld_nodes(data):
+    """Yield every dict node in a parsed JSON-LD value (handles lists and @graph)."""
+    if isinstance(data, list):
+        for item in data:
+            yield from _jsonld_nodes(item)
+    elif isinstance(data, dict):
+        yield data
+        for v in data.values():
+            if isinstance(v, (list, dict)):
+                yield from _jsonld_nodes(v)
+
+
+def _has_type(node, name):
+    t = node.get("@type")
+    return name in t if isinstance(t, list) else t == name
+
+
+def faq_jsonld_count(html):
+    """(questions, has_faqpage) for JSON-LD: only Question entries in a FAQPage's
+    mainEntity count, so a Question node elsewhere (a QAPage, a HowTo) does not."""
+    count, has_faq = 0, False
+    for block in extract_jsonld_blocks(html):
+        try:
+            data = json.loads(block.strip())
+        except ValueError:
+            continue
+        for node in _jsonld_nodes(data):
+            if not _has_type(node, "FAQPage"):
+                continue
+            has_faq = True
+            main = node.get("mainEntity") or []
+            if isinstance(main, dict):
+                main = [main]
+            count += sum(1 for q in main if isinstance(q, dict) and _has_type(q, "Question"))
+    return count, has_faq
+
+
 # ---- checks ----------------------------------------------------------------
 
-def run(path, forced_words=None, is_new=False, keyword=None):
-    with open(path, encoding="utf-8") as f:
+def evaluate(path, forced_words=None, is_new=False, keyword=None):
+    """Run every check on the file at `path` and return a plain dict (no printing):
+    results (pass/fail), warnings (advisory), info (guidance) plus page facts.
+    run() formats this as text or JSON."""
+    # utf-8-sig: a BOM from a Windows editor would otherwise sit in front of <!DOCTYPE>.
+    with open(path, encoding="utf-8-sig") as f:
         html = f.read()
 
     results = []   # (ok, label, detail)
+    warnings = []  # (label, detail) advisory: worth a look, never fails the gate
     info = []      # (label, detail) informational, not pass/fail
     def check(ok, label, detail=""):
         results.append((bool(ok), label, detail))
@@ -548,18 +697,14 @@ def run(path, forced_words=None, is_new=False, keyword=None):
                          f"link band uses computed. Recheck the passed count."))
 
     # 1-3. Dashes
-    dash_src = html_lib.unescape(html) + re.sub(
-        r"\\u(2014|2013)", lambda m: chr(int(m.group(1), 16)), html, flags=re.I)
-    em = dash_src.count("—")
-    en = dash_src.count("–")
+    em, en = count_dashes(html)
     dbl = len(re.findall(r"(?<!-)--(?!-)", visible_dash_text(html)))
     check(em == 0, "Em dashes = 0", f"found {em}")
     check(en == 0, "En dashes = 0", f"found {en}")
     check(dbl == 0, "Double-hyphen breaks = 0", f"found {dbl}")
 
     # 4. Brand mentions in reader body (0..MAX_BRAND, conclusion only)
-    brand_re = re.compile(re.escape(BRAND), re.I)
-    inv = len(brand_re.findall(text))
+    inv = brand_mentions(text)
     check(inv <= MAX_BRAND, f"Brand in body <= {MAX_BRAND}", f"found {inv} (notes excluded)")
 
     # 5. Links + budget
@@ -590,7 +735,8 @@ def run(path, forced_words=None, is_new=False, keyword=None):
     # 9. Meta title length
     mt = re.search(r"Meta title\s*\((\d+)\s*/\s*\d+\)\s*:</strong>\s*([^<]+)", html)
     if mt:
-        title_txt = mt.group(2).strip()
+        # Measure what the SERP shows: &amp; is one character, not five.
+        title_txt = html_lib.unescape(mt.group(2)).strip()
         check(len(title_txt) <= META_TITLE_MAX, f"Meta title <= {META_TITLE_MAX} chars",
               f"{len(title_txt)} chars: {title_txt}")
     else:
@@ -599,7 +745,7 @@ def run(path, forced_words=None, is_new=False, keyword=None):
     # 10. Meta description length
     md = re.search(r"Meta description\s*\((\d+)\s*/\s*\d+\)\s*:</strong>\s*([^<]+)", html)
     if md:
-        desc = md.group(2).strip()
+        desc = html_lib.unescape(md.group(2)).strip()
         check(META_DESC_MIN <= len(desc) <= META_DESC_MAX,
               f"Meta description {META_DESC_MIN}-{META_DESC_MAX} chars", f"{len(desc)} chars")
     else:
@@ -642,19 +788,22 @@ def run(path, forced_words=None, is_new=False, keyword=None):
     bad_ext = [t for t in ext_tags if "nofollow" not in t.lower() or "_blank" not in t.lower()]
     check(not bad_ext, "External links rel=nofollow target=_blank", f"{len(bad_ext)} missing attrs")
 
-    # 15. FAQ HTML count == JSON-LD count (if JSON-LD present)
-    faq_html = len(re.findall(r'itemprop="name"', html))
-    ld = re.search(r'"@type"\s*:\s*"FAQPage"', html)
-    if ld:
-        ld_q = len(re.findall(r'"@type"\s*:\s*"Question"', html))
+    # 15. FAQ HTML count == JSON-LD count (if JSON-LD present). Only Question items
+    # inside the FAQPage scope count, on both sides.
+    faq_html, _ = faq_microdata_count(html)
+    ld_q, has_ld_faq = faq_jsonld_count(html)
+    if has_ld_faq:
         check(faq_html == ld_q and faq_html > 0, "FAQ HTML == JSON-LD count", f"html={faq_html} jsonld={ld_q}")
     else:
-        check(faq_html > 0, "FAQ present (microdata)", f"{faq_html} questions; no JSON-LD script block")
+        check(faq_html > 0, "FAQ present (microdata)", f"{faq_html} questions; no FAQPage JSON-LD block")
 
-    # 15a. FAQ count within the word-count band (Rule 11; QUALITY-RULES.md FAQ count bands)
+    # 15a. FAQ count vs the word-count band (Rule 11). Advisory only: FAQ rich results
+    # have been limited to authoritative government/health sites since Aug 2023, so the
+    # band is a house-style guide for answer extraction, not a ranking requirement.
     faq_lo, faq_hi = faq_band(words)
-    check(faq_lo <= faq_html <= faq_hi, f"FAQ count in {faq_lo}-{faq_hi} band (~{words} words)",
-          f"found {faq_html}")
+    if not faq_lo <= faq_html <= faq_hi:
+        warnings.append((f"FAQ count outside the {faq_lo}-{faq_hi} house-style band (~{words} words)",
+                         f"found {faq_html}"))
 
     # 15b. Every JSON-LD block parses as valid JSON
     bad_ld = invalid_jsonld_blocks(html)
@@ -675,7 +824,7 @@ def run(path, forced_words=None, is_new=False, keyword=None):
         title_txt = mt.group(2).strip() if mt else ""
         kp = keyword_placement(html, text, h1_text, title_txt, keyword)
         check(kp["in_h1"], f'Primary keyword "{keyword}" in H1')
-        check(kp["in_first_100"], f'Primary keyword in first 100 words')
+        check(kp["in_first_100"], 'Primary keyword in first 100 words')
         check(1 <= kp["count"] <= 6, "Primary keyword not stuffed (1-6 uses)", f'{kp["count"]} uses')
         if kp["in_conclusion"] is None:
             info.append(("Primary keyword in conclusion", "no Conclusion H2 found to check"))
@@ -683,7 +832,7 @@ def run(path, forced_words=None, is_new=False, keyword=None):
             check(kp["in_conclusion"], "Primary keyword in conclusion")
         info.append(("Primary keyword in meta title", "yes" if kp["in_title"] else "NO (add it)"))
 
-    # 15f. Stale stats (Rule 12): pre-2024 years next to a statistic signal
+    # 15f. Stale stats (Rule 12): years before MIN_STAT_YEAR next to a statistic signal
     stale = stale_stat_years(text)
     check(not stale, f"No pre-{MIN_STAT_YEAR} stats", "years near stats: " + ", ".join(map(str, stale)))
 
@@ -756,37 +905,69 @@ def run(path, forced_words=None, is_new=False, keyword=None):
         detail = "; ".join(f'"{h}" reuses {a}' for h, a in reused[:5])
         info.append(("Acronym reused without local redefinition", detail))
 
-    # ---- report ----
-    mode = "NEW page" if is_new else "OPTIMIZE existing"
-    print(f"\nQA REPORT  -  {path}")
-    print(f"mode: {mode}  |  brand: {BRAND}  |  domain: {DOMAIN}")
-    print(f"reader word count: {words}  |  link band: internal<={i_max} external<={e_max}\n")
-    passed = 0
-    for ok, label, detail in results:
-        mark = "PASS" if ok else "FAIL"
-        line = f"  [{mark}] {label}"
-        if detail and not ok:
-            line += f"   ({detail})"
+    return {
+        "path": str(path),
+        "mode": "new" if is_new else "optimize",
+        "brand": BRAND,
+        "domain": DOMAIN,
+        "words": words,
+        "link_band": {"internal_max": i_max, "external_max": e_max},
+        "min_stat_year": MIN_STAT_YEAR,
+        "results": [{"ok": ok, "label": label, "detail": detail} for ok, label, detail in results],
+        "warnings": [{"label": label, "detail": detail} for label, detail in warnings],
+        "info": [{"label": label, "detail": detail} for label, detail in info],
+    }
+
+
+def print_report(report):
+    mode = "NEW page" if report["mode"] == "new" else "OPTIMIZE existing"
+    band = report["link_band"]
+    print(f"\nQA REPORT  -  {report['path']}")
+    print(f"mode: {mode}  |  brand: {report['brand']}  |  domain: {report['domain']}")
+    print(f"reader word count: {report['words']}  |  link band: "
+          f"internal<={band['internal_max']} external<={band['external_max']}\n")
+    for r in report["results"]:
+        line = f"  [{'PASS' if r['ok'] else 'FAIL'}] {r['label']}"
+        if r["detail"] and not r["ok"]:
+            line += f"   ({r['detail']})"
         print(line)
-        passed += ok
-    for label, detail in info:
-        print(f"  [INFO] {label}: {detail}")
-    fails = [r for r in results if not r[0]]
-    print(f"\n{passed}/{len(results)} checks passed.")
+    for w in report["warnings"]:
+        print(f"  [WARN] {w['label']}: {w['detail']}")
+    for i in report["info"]:
+        print(f"  [INFO] {i['label']}: {i['detail']}")
+    fails = [r for r in report["results"] if not r["ok"]]
+    print(f"\n{len(report['results']) - len(fails)}/{len(report['results'])} checks passed.")
     if fails:
         print("FAILURES:")
-        for _, label, detail in fails:
-            print(f"  - {label}: {detail}")
-    return 0 if not fails else 1
+        for r in fails:
+            print(f"  - {r['label']}: {r['detail']}")
 
 
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
+def run(path, forced_words=None, is_new=False, keyword=None, as_json=False):
+    """Evaluate and print (text, or JSON with as_json). Returns the exit code."""
+    report = evaluate(path, forced_words, is_new, keyword)
+    passed = all(r["ok"] for r in report["results"])
+    if as_json:
+        report["passed"] = passed
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        print_report(report)
+    return 0 if passed else 1
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Automated QA gate for an optimized page's HTML.")
     ap.add_argument("file")
     ap.add_argument("--words", type=int, default=None, help="reader-facing word count for link budget")
     ap.add_argument("--new", action="store_true",
                     help="new-blog mode: expect clean HTML (no diff markers or changes-summary)")
     ap.add_argument("--keyword", default=None,
                     help="primary keyword: check placement in title/H1/first-100/conclusion (Rule 2)")
-    a = ap.parse_args()
-    sys.exit(run(a.file, a.words, a.new, a.keyword))
+    ap.add_argument("--json", action="store_true",
+                    help="print machine-readable JSON instead of the text report")
+    a = ap.parse_args(argv)
+    return run(a.file, a.words, a.new, a.keyword, as_json=a.json)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

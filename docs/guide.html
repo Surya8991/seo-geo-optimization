@@ -122,12 +122,14 @@
   <section id="setup">
     <h2>1 · Set up</h2>
     <h3>Configure the brand</h3>
-    <p>Open <code>config.json</code> and set your <code>brand_name</code>, <code>domain</code>,
+    <p>Copy <code>config.example.json</code> to <code>config.json</code> (gitignored, so your brand stays
+    local) and set your <code>brand_name</code>, <code>domain</code>,
     <code>base_url</code>, the URL segments (<code>info_path</code> / <code>blog_path</code>),
-    <code>money_page_pattern</code>, <code>course_keyword_map</code>, and the <code>country_slugs</code> list
-    (geo pages that must never be linked to).</p>
+    <code>money_page_pattern</code> (with a <code>{slug}</code> placeholder), <code>course_keyword_map</code>,
+    and the <code>country_slugs</code> list (geo pages that must never be linked to).</p>
     <h3>Install &amp; try it without your own data</h3>
     <pre><code>pip install -r requirements.txt
+cp config.example.json config.json
 
 <span class="cmt"># copy the committed sample data to run the tooling immediately</span>
 cp data/scorecard.example.json data/scorecard.json
@@ -201,7 +203,7 @@ python optimizer/qa_check.py "final output/&lt;slug&gt;.html" --words 1800 --new
       <li>Every <code>&lt;img&gt;</code> has descriptive alt text and a non-generic filename.</li>
       <li>FAQ HTML matches the FAQPage JSON-LD count; every JSON-LD block parses; a present Article is complete.</li>
       <li>A current-year freshness date (<code>dateModified</code> or a visible "last updated") is present.</li>
-      <li>No pre-2024 statistics (a year before 2024 sitting next to a stat signal).</li>
+      <li>No stale statistics (a year before <code>MIN_STAT_YEAR</code>, the current year minus 2, sitting next to a stat signal).</li>
       <li>With <code>--keyword</code>: primary keyword in H1, first 100 words, and conclusion, and not stuffed (1&ndash;6 uses).</li>
       <li>Optimize mode: a <code>.changes-summary</code> table is present. New mode: no leftover diff markers.</li>
     </ul>
@@ -255,8 +257,10 @@ python optimizer/qa_check.py "final output/&lt;slug&gt;.html" --words 1800 --new
 
   <section id="dev">
     <h2>7 · Tests &amp; CI</h2>
-    <p>The mechanical logic has a full <code>pytest</code> suite; CI runs it on every push and pull request.</p>
-    <pre><code>pip install -r requirements.txt
+    <p>The mechanical logic has a full <code>pytest</code> suite; CI runs ruff and the suite (Python 3.11 + 3.12)
+    on every push and pull request.</p>
+    <pre><code>pip install -r requirements-dev.txt
+ruff check .
 pytest</code></pre>
     <p class="muted">The reference docs are the source of truth: <code>AGENTS.md</code> (rules + framework),
     <code>WORKFLOW.md</code> (runbook), <code>optimizer/QUALITY-RULES.md</code>,

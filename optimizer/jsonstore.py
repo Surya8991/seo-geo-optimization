@@ -47,7 +47,7 @@ def locked(path, timeout=10, poll=0.05):
                 raise LockTimeout(
                     f"Could not acquire {lock_path} within {timeout}s. If no other "
                     "ledger/verify command is actually running, delete the .lock file."
-                )
+                ) from None
             time.sleep(poll)
     try:
         yield

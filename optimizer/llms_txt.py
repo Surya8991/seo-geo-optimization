@@ -52,7 +52,7 @@ def main(argv=None):
         print(f"ERROR: {AUDIT} not found. Run build_scorecard.py or copy audit.example.json.",
               file=sys.stderr)
         return 1
-    with open(AUDIT, encoding="utf-8") as fh:
+    with open(AUDIT, encoding="utf-8-sig") as fh:
         data = json.load(fh)
     rows = data.get("audit_rows", [])
     money = data.get("money_pages", [])

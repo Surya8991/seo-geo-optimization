@@ -9,20 +9,26 @@ strategy, and outputs a self-contained HTML file with color-coded review markers
 
 It is brand-agnostic. Every brand specific (name, domain, URL paths, money-page keyword
 map, geo-slug list) lives in **`config.json`**, and every script and doc reads from there.
-Point it at any site by editing that one file.
+Point it at any site by editing that one file. `config.json` is gitignored so a real brand
+never lands in the public repo; the committed template is `config.example.json`.
 
 ## Configure first
-Open `config.json` and set:
+Copy `config.example.json` to `config.json` (until you do, the loader falls back to the
+example and prints a reminder), then set:
 - `brand_name` - the brand, used for the "brand mentioned once" rule and keyword stripping.
 - `domain` / `base_url` - used to classify internal vs external links and build URLs.
 - `info_path` / `blog_path` - the URL segments for the page types (e.g. `info`, `blog`).
-- `money_page_pattern` - the shape of your money/course page URLs.
+- `money_page_pattern` - the shape of your money page URLs, with `{slug}` as the placeholder (e.g. `https://www.example.com/product/{slug}`; the legacy `{course-slug}` still works).
 - `max_brand_mentions` - allowed brand mentions in reader body (default 1).
 - `course_keyword_map` - maps slug keywords to money pages (used by `build_scorecard.py`).
 - `country_slugs` - geo pages that must never be linked to (drives the automated check).
+- `min_stat_year` (optional) - pin the oldest acceptable stat/freshness year; omit or `null` for the rolling default (current year minus 2).
 
 ## Key files
-- `config.json` - the only place brand specifics live.
+- `config.json` - the only place brand specifics live (gitignored; copy it from `config.example.json`).
+- `config.example.json` - committed, brand-neutral template (example.com / "Acme").
+- `pyproject.toml` - package metadata, the `seo-geo` console script, ruff + pytest config.
+- `optimizer/cli.py` - the `seo-geo <command> ...` dispatcher (`pip install -e .`); each command runs the matching script unchanged.
 - `data/scorecard.json` - performance per page (category, clicks, impressions, CTR, position, trend, priority).
 - `data/audit.json` - strategy per page (primary keyword, intent, money page) + blog slugs + money pages.
 - `optimizer/OPTIMIZATION-CHECKLIST.md` - the 50-point checklist (10 categories).
@@ -30,13 +36,13 @@ Open `config.json` and set:
 - `optimizer/MODERN-SEO-PLAYBOOK.md` - SEO + AEO + GEO + LLM tactics, applied in the build step.
 - `optimizer/template.html` - blank output skeleton (CSS + FAQ JS + JSON-LD).
 - `optimizer/config_loader.py` - shared config reader.
-- `optimizer/constants.py` - shared stop-word list + rule thresholds (link/meta bands).
+- `optimizer/constants.py` - shared stop-word list + rule thresholds (link/meta bands, rolling `MIN_STAT_YEAR`).
 - `optimizer/jsonstore.py` - tiny cross-platform file lock (`locked()`) so concurrent `ledger.py add` / `verify.py add` invocations cannot race and drop an entry.
 - `optimizer/scoring.py` - pure, unit-tested scoring/parsing helpers used by `build_scorecard.py`.
 - `optimizer/lookup.py` - Step 1: merge scorecard + audit into one brief with the lever to pull.
 - `optimizer/cannibal.py` - Rule 6: check if another page, blog, or past build already owns a subtopic (reads the content ledger too).
 - `optimizer/ledger.py` - the content ledger: record new sections so future pages do not repeat them (`add` / `list` / `search`).
-- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages; `--keyword` checks primary-keyword placement (Rule 2). Also validates heading hierarchy (one H1, no skipped levels), image alt text/filenames, JSON-LD parsing + Article-schema completeness, a freshness date (2024 or later), and pre-2024 stats (Rule 12). Reports a Flesch readability score. It computes its own reader word count for the link-budget band (notes fully stripped, even when they wrap tables), so `--words` is advisory only and a too-high value can no longer unlock a larger link budget.
+- `optimizer/qa_check.py` - the automated QA gate. Optimize mode by default; `--new` for brand-new pages; `--keyword` checks primary-keyword placement (Rule 2). Also validates heading hierarchy (one H1, no skipped levels), image alt text/filenames, JSON-LD parsing + Article-schema completeness, a freshness date, and stale stats (Rule 12; both against `MIN_STAT_YEAR`, current year minus 2). The FAQ count band is a `[WARN]`, not a fail. Reports a Flesch readability score. `--json` prints machine-readable results. It computes its own reader word count for the link-budget band (notes fully stripped, even when they wrap tables), so `--words` is advisory only and a too-high value can no longer unlock a larger link budget.
 - `optimizer/meta_audit.py` - find duplicate meta titles/descriptions across the site (reads audit.json).
 - `optimizer/next.py` - rank pending pages by priority (skips ones already built) to pick the next page to optimize.
 - `optimizer/striking.py` - list striking-distance pages (avg position 8-20 with impressions), the highest-ROI targets.
@@ -44,18 +50,19 @@ Open `config.json` and set:
 - `optimizer/pricing.py` - generate a `/pricing.md` skeleton (name + URL per money page) so an AI agent evaluating the service can parse pricing instead of skipping a "contact sales" wall; fill in real price/limits/features by hand, never invented.
 - `optimizer/interlink.py` - inbound-link finder (Checklist #29): existing pages that should link TO the page being optimized.
 - `optimizer/linkcheck.py` - resolve every internal link in the built page and flag any that 404 (broken) or 301/302 (redirecting to a non-canonical URL); also resolves any URL inside a `BreadcrumbList` JSON-LD block, since those aren't reader-visible and can rot silently. Run it before saving so no stale-slug or dead internal link ships.
-- `optimizer/check_bots.py` - fetch the live `robots.txt` and report whether the AI retrieval/search bots are allowed (a make-or-break GEO lever).
+- `optimizer/check_bots.py` - fetch the live `robots.txt` and report whether the AI retrieval/search bots are allowed (a make-or-break GEO lever), list the training bots separately, and flag retired agents (`Claude-Web`, `anthropic-ai`) still named in it.
 - `optimizer/technical_seo.py` - fetch the LIVE published page and check it isn't accidentally noindexed, has exactly one correct self-referencing canonical tag, and (if present) a valid, self-referencing hreflang set - all site-template-level tags the pre-publish draft never carries, so `qa_check.py` can't check them.
 - `optimizer/sitecheck.py` - site-wide checks that need the full inventory, not just one page: sitemap-vs-inventory coverage (orphans in either direction) and a broken-link crawl across every money/blog page, not just the one being optimized.
 - `optimizer/citations.py` - citation-provenance ledger: record every external stat's source/year so staleness can be caught proactively (before it crosses `MIN_STAT_YEAR`) and conflicting numbers across pages can be found by search.
 - `optimizer/verify.py` - the post-publish verification log (WORKFLOW Step 9): record per-engine citation presence + GSC deltas; `verify.py report` rolls them up.
-- `build_scorecard.py` - builds `scorecard.json` + `audit.json` from GSC + inventory exports.
+- `build_scorecard.py` - builds `scorecard.json` + `audit.json` from GSC + inventory exports (`--inventory`, `--gsc-dir`, `--aggregate`, `--out-dir` override the default paths).
 - `docs/guide.html` - a self-contained HTML operator guide (open in a browser) covering setup, both tracks, every helper, and the QA gate.
 - `data/content_ledger.json` - the running record of new sections produced (created on first `ledger.py add`).
 - `data/verification_log.json` - post-publish verification results (created on first `verify.py add`).
 - `data/*.example.json` - committed sample scorecard/audit so the tooling runs before you have GSC exports.
-- `.github/workflows/ci.yml` - CI: runs the pytest suite and byte-compiles all Python on every push/PR.
-- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py`, `next.py`, `interlink.py`, `check_bots.py`, `verify.py`, `meta_audit.py`, `striking.py`, `llms_txt.py`, `linkcheck.py`, `lookup.py`, `jsonstore.py`, `config_loader.py`, `technical_seo.py`, `sitecheck.py`, `citations.py`, `pricing.py` (`pip install -r requirements.txt && pytest`). Tests pin a fixed config via `SEO_GEO_CONFIG` (see `tests/fixtures/config.test.json`), so they stay green no matter which brand `config.json` holds.
+- `.github/workflows/ci.yml` - CI: ruff lint, the pytest suite with a coverage report (Python 3.11 + 3.12, Ubuntu + Windows), and a byte-compile of all Python on every push/PR.
+- `requirements-dev.txt` - dev tooling (pytest-cov, ruff) on top of `requirements.txt`.
+- `tests/` - `pytest` suite for `qa_check.py`, `scoring.py`, `ledger.py`, `cannibal.py`, `next.py`, `interlink.py`, `check_bots.py`, `verify.py`, `meta_audit.py`, `striking.py`, `llms_txt.py`, `linkcheck.py`, `lookup.py`, `jsonstore.py`, `config_loader.py`, `technical_seo.py`, `sitecheck.py`, `citations.py`, `pricing.py`, `build_scorecard.py`, `cli.py` (`pip install -r requirements-dev.txt && pytest`). Tests pin a fixed config via `SEO_GEO_CONFIG` (see `tests/fixtures/config.test.json`, which also pins `min_stat_year`), so they stay green no matter which brand `config.json` holds or what year it is.
 - `WORKFLOW.md` - the per-page operating procedure (optimize-existing track), including Step 9 post-publish verification.
 - `.claude/commands/optimize-page.md` - optimize an existing page (`/optimize-page <slug>`).
 - `.claude/commands/new-page.md` - create a new page from scratch (`/new-page <topic>`).
@@ -78,28 +85,28 @@ Self-contained: inline CSS + inline JS. New pages (the `/new-page` track) ship c
 ## Quality rules (apply to every page, no exceptions)
 
 1. **Zero em dashes.** Also zero en dashes and zero `--` used as a sentence break. Regular hyphens only for compound words. Replace with commas, periods, colons, semicolons, or parentheses. Em-dash overuse is a known AI-content signal.
-2. **No keyword stuffing.** Primary keyword only in title, H1, meta description, URL, first 100 words, and once in the conclusion (max 5-6 total). If a sentence reads fine without the keyword, remove it.
-3. **Link budget + contextual interlinking.** Follow the band table in `QUALITY-RULES.md`. Max 1 link per paragraph. Every internal link must be contextually relevant (a reader would genuinely click it there) with descriptive anchor text that names the destination topic. **Never link to country/city pages** (see `config.json` `country_slugs`). Internal links go to money/course pages, category pages, or other content pages.
+2. **No keyword stuffing.** Primary keyword only in title, H1, meta description, URL, first 100 words, and once in the conclusion (max 5-6 total; the cap is house style, not a search-engine threshold). If a sentence reads fine without the keyword, remove it.
+3. **Link budget + contextual interlinking.** Follow the band table in `QUALITY-RULES.md` (house style). Max 1 link per paragraph. Every internal link must be contextually relevant (a reader would genuinely click it there) with descriptive anchor text that names the destination topic. **Never link to country/city pages** (see `config.json` `country_slugs`). Internal links go to money/course pages, category pages, or other content pages.
 4. **No CTA anchor text on internal links.** No "Explore", "Discover", "Get Started", "Learn More", "View All", "Check Out", "Try". Use descriptive anchor text that names the destination topic.
 5. **Minimal brand usage.** The brand appears only in the conclusion, only if natural (`max_brand_mentions`). Internal links use generic descriptive anchor text, not brand-prefixed text.
 6. **Cannibalization check before new sections, and no future repeats.** Before adding any new H2, run `cannibal.py` (it searches existing pages, blogs, and the content ledger). If another page owns the subtopic in depth, add a 1-2 sentence mention with an internal link, or skip it. After a build, record every new section with `ledger.py add` so a later page cannot write the same section again near-verbatim. A `[LEDGER]` hit means a past build already produced it: link to it, do not duplicate.
 7. **Red markers for removals.** Thin, off-topic, or harmful content goes in `.remove-block` + `.remove-tag` labeled with the reason.
 8. **External link discipline.** Hyperlink only for a specific stat, study, or quote; well-known sources can be name-only. All external links `rel="nofollow" target="_blank"`.
-9. **American English only.** organize, behavior, color, analyze. No British spellings.
+9. **American English only (house style).** organize, behavior, color, analyze. No British spellings. A consistency choice for this site, not a ranking factor.
 10. **No AI content signals.** No em dashes; vary sentence structure; no filler ("In today's rapidly evolving...", "It's worth noting..."); no excessive hedging.
-11. **FAQ quality and limits.** FAQs target real PAA and new angles, not body rehash. Count band by word count (5-6 under 3K, 6-8 for 3-6K, 8-10 for 6K+). HTML items must match JSON-LD entries exactly.
-12. **Stat verification.** Every stat real, sourced, and 2024-2026. Replace or remove anything older or unverifiable.
+11. **FAQ quality and limits.** FAQs target real PAA and new angles, not body rehash. Count band by word count (house style, advisory: 5-6 under 3K, 6-8 for 3-6K, 8-10 for 6K+). HTML items must match JSON-LD entries exactly. FAQ rich results have been limited to authoritative government/health sites since Aug 2023, so the FAQ and its schema are there for machine readability and answer extraction, not a SERP feature.
+12. **Stat verification.** Every stat real, sourced, and from the last three calendar years (`MIN_STAT_YEAR` = current year minus 2; 2024-2026 in 2026). Replace or remove anything older or unverifiable.
 13. **Secondary + longtail keyword coverage.** Beyond the primary keyword, place the secondary and longtail terms found in research naturally in H2/H3s and body. Never force them; never stuff.
-14. **Flow and readability.** Logical section order, one idea per paragraph, no jumps or repeats, answer-first per section. Short paragraphs, active voice, plain words. Target Flesch reading ease 60+ (`qa_check.py` reports it).
+14. **Flow and readability.** Logical section order, one idea per paragraph, no jumps or repeats, answer-first per section. Short paragraphs, active voice, plain words. Target Flesch reading ease 60+ (house style; `qa_check.py` reports it).
 15. **Changes summary (optimize mode).** End the review copy with the `.changes-summary` table documenting exactly what was done. `qa_check.py` requires it in optimize mode; new pages omit it.
 16. **Section self-sufficiency for AI extraction.** AI answer engines usually quote a single H2/H3 chunk, not the whole page, so each section must stand alone: open with the actual subject named, not a bare pronoun ("It"/"This"/"They"/"So"); redefine an acronym if the section could plausibly be quoted on its own; give the H2/H3 an `id` slug so it can be cited/linked precisely. `qa_check.py` flags a dangling-pronoun opener, an over-length paragraph, and a too-long answer under a question-phrased heading as INFO notes - not hard fails, but read each section in isolation before shipping.
 
 ## 8-lever SEO framework (address all 8 on every page)
 1. **Title/Meta SERP validation** - competitor titles, year for freshness, meta hook, char counts (title <=60, meta 140-160, target ~150-155).
 2. **Competitor content-gap analysis** - top 5-10 results across USA, India, Canada, UK, Australia + AI Overview; find sections/angles/data they have and you don't.
-3. **Content freshness audit** - replace pre-2024 stats with 2024-2026 equivalents; update names; add current-year references.
+3. **Content freshness audit** - replace stats older than `MIN_STAT_YEAR` (current year minus 2) with recent equivalents; update names; add current-year references.
 4. **Money-page internal link** - link to the page's money page from `audit.json` with descriptive anchor text (Rule 4), no country/city links.
-5. **Schema / FAQ expansion** - FAQ targeting PAA with JSON-LD, new angles only (Rule 11).
+5. **Schema / FAQ expansion** - FAQ targeting PAA with JSON-LD, new angles only (Rule 11). Schema is a machine-readability/answer-extraction aid; FAQ rich results are gov/health-only since Aug 2023 and HowTo rich results were removed in Sep 2023.
 6. **Content-depth additions** - new H2/H3 sections filling competitor gaps; cannibalization check first (Rule 6).
 7. **Keyword targeting** - primary keyword placement (Rule 2); secondary keywords from competitors; fold in any GSC keywords the user supplies.
 8. **QA rules check** - run `qa_check.py`; every rule passes before saving.
@@ -124,10 +131,13 @@ confirmation before starting the next page.
 
 ## What the 2026 research changed (applied in the playbook)
 - **AI crawlers split into training vs retrieval bots.** To be cited you must allow the
-  retrieval bots (`OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, `Claude-Web`); blocking
-  the training bots (`GPTBot`, `Google-Extended`, `CCBot`) does not affect citations.
+  retrieval/user bots (`OAI-SearchBot`, `ChatGPT-User`, `Claude-SearchBot`, `Claude-User`,
+  `PerplexityBot`, `Perplexity-User`, plus `Googlebot` and `Bingbot`); blocking the training
+  bots/tokens (`GPTBot`, `ClaudeBot`, `Google-Extended`, `Applebot-Extended`, `CCBot`,
+  `meta-externalagent`) does not affect citations. `Claude-Web` and `anthropic-ai` are retired.
 - **Schema helps parsing, not citations directly.** Evidence is split, so add JSON-LD for
-  correctness but do not rely on it as a ranking lever.
+  correctness but do not rely on it as a ranking lever. FAQ rich results are limited to
+  authoritative gov/health sites (Aug 2023) and HowTo rich results are gone (Sep 2023).
 - **Brand mentions and entity authority beat markup.** Third-party mentions, Wikipedia/entity
   clarity, and original data are the strongest generative-visibility levers.
 - **Engines barely overlap.** Ranking on one AI engine rarely transfers to another; check the

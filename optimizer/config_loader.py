@@ -3,6 +3,10 @@
 Shared config loader. Reads config.json from the project root so every script
 pulls brand, domain and URL patterns from one place. No brand name is hard-coded
 anywhere else.
+
+config.json is gitignored (it holds your real brand). The committed template is
+config.example.json: copy it to config.json and edit. If config.json is missing,
+the loader falls back to config.example.json and prints a one-line hint to stderr.
 """
 import json
 import os
@@ -23,10 +27,13 @@ _DEFAULTS = {
     "base_url": "https://www.example.com/",
     "info_path": "info",
     "blog_path": "blog",
-    "money_page_pattern": "https://www.example.com/{course-slug}/",
+    "money_page_pattern": "https://www.example.com/{slug}/",
     "max_brand_mentions": 1,
     "course_keyword_map": {},
     "country_slugs": [],
+    # Optional: override the oldest stat/freshness year accepted by qa_check.py
+    # (Rule 12). null = rolling default (current year minus 2, see constants.py).
+    "min_stat_year": None,
 }
 
 
@@ -43,6 +50,11 @@ def config_path():
     if override:
         return override
     return os.path.join(project_root(), "config.json")
+
+
+def example_config_path():
+    """Path to the committed, brand-neutral template (config.example.json)."""
+    return os.path.join(project_root(), "config.example.json")
 
 
 # Expected type per key. A mismatch (e.g. country_slugs given as a string instead of
@@ -84,14 +96,26 @@ def _validate(cfg, path):
     for slug in cfg["country_slugs"]:
         if not isinstance(slug, str):
             raise ConfigError(f"{path}: country_slugs entries must be strings, got {slug!r}")
+    msy = cfg.get("min_stat_year")
+    if msy is not None and (not isinstance(msy, int) or isinstance(msy, bool)):
+        raise ConfigError(f"{path}: 'min_stat_year' must be an int or null, got {msy!r}")
 
 
 def load_config():
     """Return the merged config (config file over defaults). Missing file = defaults."""
     cfg = dict(_DEFAULTS)
     path = config_path()
+    if not os.path.exists(path) and not os.environ.get("SEO_GEO_CONFIG"):
+        example = example_config_path()
+        if os.path.exists(example):
+            print(f"NOTE: {path} not found; using {example}. "
+                  f"Copy config.example.json to config.json and set your brand.",
+                  file=sys.stderr)
+            path = example
     if os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
+        # utf-8-sig: a config saved by Windows Notepad starts with a BOM, which
+        # plain utf-8 would hand to json.load as a stray character.
+        with open(path, encoding="utf-8-sig") as f:
             user = json.load(f)
         for k, v in user.items():
             if not k.startswith("_"):   # ignore _note / _example keys

@@ -7,7 +7,21 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ruff>=0.6"
+      - name: Ruff lint
+        run: ruff check .
+
+  tests:
     # Windows too: the maintainer runs on Windows, where file locking, encodings and
     # os.replace behave differently from Linux.
     runs-on: ${{ matrix.os }}
@@ -15,16 +29,29 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run tests
-        run: pytest -q
+          pip install -r requirements-dev.txt
+      - name: Run tests with coverage
+        run: pytest -q --cov --cov-report=term
       - name: Byte-compile all Python
-        run: python -m compileall build_scorecard.py optimizer
+        run: python -m compileall -q build_scorecard.py optimizer
+
+  # Single status named "test" for branch protection: matrix jobs report as
+  # "tests (os, version)", so the required check needs one stable name.
+  test:
+    if: always()
+    needs: [lint, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require lint and all test jobs to pass
+        run: |
+          test "${{ needs.lint.result }}" = "success"
+          test "${{ needs.tests.result }}" = "success"

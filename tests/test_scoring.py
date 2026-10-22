@@ -147,3 +147,39 @@ class TestSafeParsers:
     def test_safe_float(self):
         assert scoring.safe_float("3.5") == 3.5
         assert scoring.safe_float(None) == 0.0
+
+
+class TestIntentWholeWord:
+    def test_vs_inside_word_is_not_commercial(self):
+        # "canvas" contains "vs"; substring matching called this commercial.
+        assert scoring.classify_intent("canvas-lms-overview", "Canvas LMS Overview") == "informational"
+
+    def test_top_inside_word_is_not_commercial(self):
+        assert scoring.classify_intent("laptop-setup-guide", "Laptop Setup Guide") == "informational"
+
+    def test_best_practices_is_informational(self):
+        assert scoring.classify_intent(
+            "employee-training-best-practices", "Employee Training Best Practices") == "informational"
+
+    def test_best_alone_is_still_commercial(self):
+        assert scoring.classify_intent("best-lms", "Best LMS Platforms") == "commercial"
+
+    def test_vs_slug_token_is_commercial(self):
+        assert scoring.classify_intent("scrum-vs-kanban", "Scrum or Kanban") == "commercial"
+
+    def test_sign_up_phrase_from_slug_is_navigational(self):
+        assert scoring.classify_intent("sign-up", "Create your account") == "navigational"
+
+    def test_register_inside_word_is_not_navigational(self):
+        assert scoring.classify_intent("registered-nurse-guide", "Registered Nurse Guide") == "informational"
+
+
+class TestMoneyPagePlaceholder:
+    def test_generic_slug_placeholder(self):
+        rx = scoring.money_page_pattern_regex("https://www.example.com/product/{slug}")
+        assert rx.match("https://www.example.com/product/widget-pro")
+        assert not rx.match("https://www.example.com/blog/widget-pro")
+
+    def test_legacy_placeholder_still_supported(self):
+        rx = scoring.money_page_pattern_regex("https://www.example.com/course/{course-slug}")
+        assert rx.match("https://www.example.com/course/agile-scrum")
