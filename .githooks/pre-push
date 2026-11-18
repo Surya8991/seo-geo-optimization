@@ -1,0 +1,15 @@
+#!/bin/sh
+# SEO & GEO Optimization pre-push gate. Guards (main-branch, identity, secrets) come from
+# lib/guards.sh; the checks below are specific to this project (Python optimizer + scorecard).
+# Enable once per clone: git config core.hooksPath .githooks   (see README.md)
+HOOK_DIR=$(cd "$(dirname "$0")" && pwd)
+. "$HOOK_DIR/lib/guards.sh"
+pp_init "$@"
+pp_run_guards || exit 1
+pp_should_check || exit 0
+
+pp_find_python
+pp_py_step_if ruff   "ruff lint"   "$PP_PY" -m ruff check .
+pp_py_step_if pytest "pytest"      "$PP_PY" -m pytest -q
+pp_step "byte-compile" "$PP_PY" -m compileall -q build_scorecard.py optimizer
+pp_done
